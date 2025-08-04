@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -40,8 +41,8 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { Task, Subtask } from '@/lib/types';
-import { tasks, categories } from '@/lib/data';
+import type { Task } from '@/lib/types';
+import { tasks as initialTasks, categories } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -53,8 +54,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { suggestTaskCategory } from '@/ai/flows/suggest-task-category';
 
-
-function TaskItem({ task }: { task: Task }) {
+function TaskItem({ task, onMarkAsDone }: { task: Task, onMarkAsDone: (id: string) => void }) {
   const statusVariant = {
     pending: 'secondary',
     today: 'default',
@@ -95,11 +95,13 @@ function TaskItem({ task }: { task: Task }) {
           </div>
         </CardContent>
       )}
-      <CardFooter>
-        <Button variant="secondary" size="sm">
-          Mark as Done
-        </Button>
-      </CardFooter>
+      {task.status !== 'completed' && (
+        <CardFooter>
+          <Button variant="secondary" size="sm" onClick={() => onMarkAsDone(task.id)}>
+            Mark as Done
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }
@@ -229,10 +231,37 @@ function NewTaskSheet() {
 }
 
 export default function TasksPage() {
-  const allTasks: Task[] = tasks;
-  const pendingTasks = allTasks.filter((task) => task.status === 'pending');
-  const todayTasks = allTasks.filter((task) => task.status === 'today');
-  const completedTasks = allTasks.filter((task) => task.status === 'completed');
+  const [tasks, setTasks] = React.useState<Task[]>(initialTasks);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [filterCategories, setFilterCategories] = React.useState<string[]>(
+    categories.map(c => c.name)
+  );
+
+  const handleMarkAsDone = (id: string) => {
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === id
+          ? { ...task, status: 'completed', completedAt: new Date().toISOString() }
+          : task
+      )
+    );
+  };
+
+  const onFilterChange = (category: string, checked: boolean) => {
+    setFilterCategories(prev =>
+      checked ? [...prev, category] : prev.filter(c => c !== category)
+    );
+  };
+  
+  const filteredTasks = tasks
+    .filter(task =>
+      task.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .filter(task => filterCategories.includes(task.category));
+
+  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending');
+  const todayTasks = filteredTasks.filter((task) => task.status === 'today');
+  const completedTasks = filteredTasks.filter((task) => task.status === 'completed');
 
   return (
     <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
@@ -255,10 +284,17 @@ export default function TasksPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Filter by</DropdownMenuLabel>
+                <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked>Due Date</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Category</DropdownMenuCheckboxItem>
+                {categories.map(category => (
+                  <DropdownMenuCheckboxItem
+                    key={category.id}
+                    checked={filterCategories.includes(category.name)}
+                    onCheckedChange={(checked) => onFilterChange(category.name, checked)}
+                  >
+                    {category.name}
+                  </DropdownMenuCheckboxItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <NewTaskSheet />
@@ -266,33 +302,38 @@ export default function TasksPage() {
         </div>
         <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search tasks..." className="pl-8" />
+            <Input 
+              placeholder="Search tasks..." 
+              className="pl-8" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
         </div>
         <TabsContent value="all">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-            {allTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
+            {filteredTasks.map((task) => (
+              <TaskItem key={task.id} task={task} onMarkAsDone={handleMarkAsDone} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="pending">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {pendingTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
+              <TaskItem key={task.id} task={task} onMarkAsDone={handleMarkAsDone} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="today">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {todayTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
+              <TaskItem key={task.id} task={task} onMarkAsDone={handleMarkAsDone} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="completed">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {completedTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
+              <TaskItem key={task.id} task={task} onMarkAsDone={handleMarkAsDone} />
             ))}
           </div>
         </TabsContent>

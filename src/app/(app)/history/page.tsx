@@ -1,9 +1,14 @@
+
+'use client';
+
+import { useState } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -14,11 +19,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { tasks } from '@/lib/data';
+import { tasks as initialTasks } from '@/lib/data';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import type { Task } from '@/lib/types';
 
 export default function HistoryPage() {
-  const completedTasks = tasks.filter((task) => task.status === 'completed');
+  const [completedTasks, setCompletedTasks] = useState<Task[]>(
+    initialTasks.filter((task) => task.status === 'completed')
+  );
+
+  const handleClearHistory = () => {
+    setCompletedTasks([]);
+  };
 
   return (
     <Card>
@@ -60,6 +73,11 @@ export default function HistoryPage() {
           </TableBody>
         </Table>
       </CardContent>
+      <CardFooter className="border-t px-6 py-4">
+        <Button variant="destructive" onClick={handleClearHistory} disabled={completedTasks.length === 0}>
+          Clear History
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
