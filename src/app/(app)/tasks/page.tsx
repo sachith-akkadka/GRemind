@@ -38,13 +38,11 @@ import {
 import { Input } from '@/components/ui/input';
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +58,14 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTaskTitle } from '@/ai/flows/suggest-task-title';
 import { suggestLocations } from '@/ai/flows/suggest-locations';
+import { suggestTaskLocation } from '@/ai/flows/suggest-task-location';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +75,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task, onUpdateTask: (task: Task) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void }) {
@@ -78,16 +85,39 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
     completed: 'outline',
     missed: 'destructive',
   } as const;
+  const { toast } = useToast();
 
   const handleMarkAsDone = () => {
     onUpdateTask({ ...task, status: 'completed', completedAt: new Date().toISOString() });
+     toast({
+      title: "Task Completed!",
+      description: `"${task.title}" has been moved to completed.`,
+    });
   };
   
-  const handleStartNavigation = () => {
-    if (task.store) {
-      const query = encodeURIComponent(task.store);
-      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+  const handleStartNavigation = async () => {
+    let destination = task.store;
+    if (!destination) {
+      // If no location, use AI to suggest one based on the title
+      try {
+        const result = await suggestTaskLocation({ taskTitle: task.title });
+        if (result.suggestedLocation) {
+          destination = result.suggestedLocation;
+          toast({
+            title: "No location set!",
+            description: `We've suggested a destination for you: ${destination}. Starting navigation.`,
+          });
+        } else {
+           toast({ title: "Navigation Failed", description: "Could not suggest a location for this task.", variant: "destructive" });
+           return;
+        }
+      } catch (error) {
+        toast({ title: "Navigation Failed", description: "Could not suggest a location for this task.", variant: "destructive" });
+        return;
+      }
     }
+    const query = encodeURIComponent(destination);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
   };
 
   return (
@@ -125,7 +155,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground space-y-1">
-           <p>Due: {format(new Date(task.dueDate), "PPP, p")}</p>
+           <p className="flex items-center gap-2"><Clock className="w-4 h-4"/> Due: {format(new Date(task.dueDate), "PPP, p")}</p>
            {task.store && <p className="flex items-center gap-2"><MapPin className="w-4 h-4"/> {task.store}</p>}
         </div>
         {task.subtasks && task.subtasks.length > 0 && (
@@ -150,7 +180,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
       </CardContent>
       {task.status !== 'completed' && (
         <CardFooter className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={!task.store}>
+          <Button variant="outline" size="sm" onClick={handleStartNavigation}>
             <Navigation className="mr-2 h-4 w-4" /> Start Navigation
           </Button>
         </CardFooter>
@@ -181,28 +211,43 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
-  const [time, setTime] = React.useState('09:00');
+  
+  const [hour, setHour] = React.useState('09');
+  const [minute, setMinute] = React.useState('00');
+  const [ampm, setAmpm] = React.useState('AM');
+
   const [location, setLocation] = React.useState('');
   const [locationSuggestions, setLocationSuggestions] = React.useState<string[]>([]);
   const [isSuggestingTitle, setIsSuggestingTitle] = React.useState(false);
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
 
   React.useEffect(() => {
-    if (editingTask) {
-        setTitle(editingTask.title);
-        setDescription(editingTask.description || '');
-        setDueDate(new Date(editingTask.dueDate));
-        setTime(format(new Date(editingTask.dueDate), 'HH:mm'));
-        setLocation(editingTask.store || '');
-    } else {
-        // Reset form when not editing
-        setTitle('');
-        setDescription('');
-        setDueDate(new Date());
-        setTime('09:00');
-        setLocation('');
+    if (open) { // Only update form when sheet opens
+        if (editingTask) {
+            setTitle(editingTask.title);
+            setDescription(editingTask.description || '');
+            const taskDueDate = new Date(editingTask.dueDate);
+            setDueDate(taskDueDate);
+            const formattedHour = format(taskDueDate, 'hh');
+            const formattedMinute = format(taskDueDate, 'mm');
+            const formattedAmPm = format(taskDueDate, 'aa');
+            setHour(formattedHour);
+            setMinute(formattedMinute);
+            setAmpm(formattedAmPm.toUpperCase());
+            setLocation(editingTask.store || '');
+        } else {
+            // Reset form for new task
+            setTitle('');
+            setDescription('');
+            const now = new Date();
+            setDueDate(now);
+            setHour(format(now, 'hh'));
+            setMinute('00'); // Start at the hour
+            setAmpm(format(now, 'aa').toUpperCase());
+            setLocation('');
+        }
     }
-  }, [editingTask]);
+  }, [open, editingTask]);
 
 
   const handleSuggestTitle = async () => {
@@ -256,9 +301,16 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
         return;
     }
     
-    const [hours, minutes] = time.split(':').map(Number);
+    let hours = parseInt(hour, 10);
+    if (ampm === 'PM' && hours < 12) {
+        hours += 12;
+    }
+    if (ampm === 'AM' && hours === 12) {
+        hours = 0;
+    }
+
     const combinedDueDate = new Date(dueDate);
-    combinedDueDate.setHours(hours, minutes);
+    combinedDueDate.setHours(hours, parseInt(minute, 10), 0, 0);
 
     onTaskSubmit({
         id: editingTask?.id,
@@ -316,10 +368,29 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
               </Popover>
             </div>
              <div className="grid gap-2">
-                <Label htmlFor="time">Time</Label>
-                 <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input id="time" type="time" className="pl-8" value={time} onChange={e => setTime(e.target.value)} />
+                <Label>Time</Label>
+                 <div className="flex items-center gap-2">
+                    <Select value={hour} onValueChange={setHour}>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <SelectItem key={i + 1} value={(i + 1).toString().padStart(2, '0')}>{(i + 1).toString().padStart(2, '0')}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={minute} onValueChange={setMinute}>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {Array.from({ length: 60 }, (_, i) => i).map(m => <SelectItem key={m} value={m.toString().padStart(2, '0')}>{m.toString().padStart(2, '0')}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                     <Select value={ampm} onValueChange={setAmpm}>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="AM">AM</SelectItem>
+                            <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
               </div>
           </div>
@@ -328,7 +399,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input id="location" placeholder="e.g., Downtown Mall" className="pl-8" value={location} onChange={handleLocationChange} />
-              {isSuggestingLocation && <div className="p-2 text-sm text-center">Finding nearby places...</div>}
+              {isSuggestingLocation && <div className="p-2 text-sm text-center text-muted-foreground">Finding nearby places...</div>}
               {locationSuggestions.length > 0 && (
                 <div className="absolute z-10 w-full bg-card border rounded-md mt-1 shadow-lg">
                   {locationSuggestions.map((suggestion, index) => (
@@ -380,7 +451,7 @@ export default function TasksPage() {
     if (taskData.id) { // Editing existing task
         setTasks(prevTasks =>
             prevTasks.map(task =>
-                task.id === taskData.id ? { ...task, ...taskData, category: task.category } : task
+                task.id === taskData.id ? { ...task, ...taskData, category: task.category, status: task.status } : task
             )
         );
     } else { // Adding new task
@@ -413,7 +484,7 @@ export default function TasksPage() {
   };
   
   const handleStartMultiStopNavigation = () => {
-    const pendingTasksWithLocations = tasks.filter(task => task.status === 'pending' && task.store);
+    const pendingTasksWithLocations = tasks.filter(task => (task.status === 'pending' || task.status === 'today') && task.store);
     if (pendingTasksWithLocations.length > 1) {
       const waypoints = pendingTasksWithLocations.slice(0, -1).map(task => encodeURIComponent(task.store!)).join('|');
       const destination = encodeURIComponent(pendingTasksWithLocations[pendingTasksWithLocations.length - 1].store!);
@@ -433,7 +504,7 @@ export default function TasksPage() {
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
   const completedTasks = filteredTasks.filter((task) => task.status === 'completed');
   
-  const pendingTasksWithLocationCount = pendingTasks.filter(t => t.store).length;
+  const actionableTasksWithLocationCount = tasks.filter(t => (t.status === 'pending' || t.status === 'today') && t.store).length;
 
   return (
     <AlertDialog>
@@ -449,7 +520,7 @@ export default function TasksPage() {
             </TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
-            {pendingTasksWithLocationCount >= 2 && (
+            {actionableTasksWithLocationCount >= 2 && (
                 <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation}>
                   <Navigation className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Multi-Stop</span>
@@ -530,3 +601,4 @@ export default function TasksPage() {
     </AlertDialog>
   );
 }
+
