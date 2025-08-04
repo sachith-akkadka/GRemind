@@ -1,6 +1,7 @@
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   status: 'pending' | 'today' | 'completed' | 'missed';
   dueDate: string;
   completedAt?: string;

@@ -31,10 +31,11 @@ const prompt = ai.definePrompt({
   name: 'suggestLocationsPrompt',
   input: {schema: SuggestLocationsInputSchema},
   output: {schema: SuggestLocationsOutputSchema},
-  prompt: `You are a helpful assistant that provides location suggestions.
-  Based on the user's query, provide a list of up to 5 potential matching locations.
-  Do not suggest fake places. Only suggest real-world locations.
-  For example, if the query is "coffee near sf", you could suggest: "Blue Bottle Coffee, San Francisco, CA", "Ritual Coffee Roasters, San Francisco, CA", etc.
+  prompt: `You are a helpful assistant that provides real-world location suggestions for a geofencing reminder app.
+  Based on the user's query, provide a list of up to 5 potential matching business or landmark names and their city.
+  Prioritize well-known places. Do not make up places.
+  For example, if the query is "coffee near sf", you could suggest: "Blue Bottle Coffee, San Francisco", "Ritual Coffee Roasters, San Francisco", "Philz Coffee, San Francisco".
+  If the query is "target", you could suggest: "Target, Mountain View", "Target, Sunnyvale", "Target, Cupertino".
 
   Query: {{{query}}}
   `,
@@ -49,7 +50,7 @@ const suggestLocationsFlow = ai.defineFlow(
   async input => {
     // In a real app, you would use a tool here to call a Maps API.
     // For this prototype, we'll use an LLM to generate plausible suggestions.
-    if (input.query.toLowerCase().startsWith('star')) {
+    if (input.query.toLowerCase().trim().startsWith('star')) {
         return {
             suggestions: [
                 'Starbucks, 123 Main St, Anytown, USA',

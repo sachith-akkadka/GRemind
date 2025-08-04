@@ -15,6 +15,7 @@ import {
   Edit,
   Navigation,
   CheckCircle,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,9 +57,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { suggestTaskCategory } from '@/ai/flows/suggest-task-category';
+import { suggestTaskTitle } from '@/ai/flows/suggest-task-title';
 import { suggestLocations } from '@/ai/flows/suggest-locations';
 import {
   AlertDialog,
@@ -69,10 +69,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-function TaskItem({ task, onUpdateTask, onDeleteTask }: { task: Task, onUpdateTask: (task: Task) => void, onDeleteTask: (id: string) => void }) {
+function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task, onUpdateTask: (task: Task) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void }) {
   const statusVariant = {
     pending: 'secondary',
     today: 'default',
@@ -103,10 +102,16 @@ function TaskItem({ task, onUpdateTask, onDeleteTask }: { task: Task, onUpdateTa
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEditTask(task)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
+              {task.status !== 'completed' && (
+                <DropdownMenuItem onClick={handleMarkAsDone}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Done
+                </DropdownMenuItem>
+              )}
                <AlertDialogTrigger asChild>
                 <DropdownMenuItem className="text-destructive focus:text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -116,7 +121,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask }: { task: Task, onUpdateTa
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Badge variant={statusVariant[task.status]} className="w-fit">{task.status}</Badge>
+        <Badge variant={statusVariant[task.status]} className="w-fit capitalize">{task.status}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground space-y-1">
@@ -144,10 +149,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask }: { task: Task, onUpdateTa
         )}
       </CardContent>
       {task.status !== 'completed' && (
-        <CardFooter className="flex justify-between">
-          <Button variant="secondary" size="sm" onClick={handleMarkAsDone}>
-            <CheckCircle className="mr-2 h-4 w-4" /> Mark as Done
-          </Button>
+        <CardFooter className="flex justify-end">
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={!task.store}>
             <Navigation className="mr-2 h-4 w-4" /> Start Navigation
           </Button>
@@ -174,36 +176,44 @@ function TaskItem({ task, onUpdateTask, onDeleteTask }: { task: Task, onUpdateTa
   );
 }
 
-function NewTaskSheet({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'status' | 'completedAt'>) => void }) {
+function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open: boolean, onOpenChange: (open: boolean) => void, onTaskSubmit: (task: Omit<Task, 'id' | 'status' | 'completedAt' | 'category'> & { id?: string }) => void, editingTask: Task | null }) {
   const { toast } = useToast();
-  const [taskTitle, setTaskTitle] = React.useState('');
-  const [category, setCategory] = React.useState('');
-  const [location, setLocation] = React.useState('');
+  const [title, setTitle] = React.useState('');
+  const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
+  const [time, setTime] = React.useState('09:00');
+  const [location, setLocation] = React.useState('');
   const [locationSuggestions, setLocationSuggestions] = React.useState<string[]>([]);
-  const [isSuggestingCategory, setIsSuggestingCategory] = React.useState(false);
+  const [isSuggestingTitle, setIsSuggestingTitle] = React.useState(false);
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
 
-  const handleSuggestCategory = async () => {
-    if (!taskTitle) {
-      toast({
-        title: 'Uh oh!',
-        description: 'Please enter a task title first to get a suggestion.',
-        variant: 'destructive',
-      });
-      return;
+  React.useEffect(() => {
+    if (editingTask) {
+        setTitle(editingTask.title);
+        setDescription(editingTask.description || '');
+        setDueDate(new Date(editingTask.dueDate));
+        setTime(format(new Date(editingTask.dueDate), 'HH:mm'));
+        setLocation(editingTask.store || '');
+    } else {
+        // Reset form when not editing
+        setTitle('');
+        setDescription('');
+        setDueDate(new Date());
+        setTime('09:00');
+        setLocation('');
     }
-    setIsSuggestingCategory(true);
+  }, [editingTask]);
+
+
+  const handleSuggestTitle = async () => {
+    setIsSuggestingTitle(true);
     try {
-      const result = await suggestTaskCategory({
-        taskTitle,
-        pastCategories: categories.map(c => c.name),
-      });
-      if (result.suggestedCategory) {
-        setCategory(result.suggestedCategory);
+      const result = await suggestTaskTitle({});
+      if (result.suggestedTitle) {
+        setTitle(result.suggestedTitle);
         toast({
-          title: 'Category Suggested!',
-          description: `We've set the category to "${result.suggestedCategory}".`,
+          title: 'Title Suggested!',
+          description: `We've suggested a title for you.`,
         });
       }
     } catch (error) {
@@ -213,7 +223,7 @@ function NewTaskSheet({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'stat
         variant: 'destructive',
       });
     } finally {
-      setIsSuggestingCategory(false);
+      setIsSuggestingTitle(false);
     }
   };
   
@@ -226,7 +236,6 @@ function NewTaskSheet({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'stat
         const result = await suggestLocations({ query });
         setLocationSuggestions(result.suggestions);
       } catch (error) {
-        // Silently fail
         console.error("Location suggestion failed", error);
         setLocationSuggestions([]);
       } finally {
@@ -237,53 +246,53 @@ function NewTaskSheet({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'stat
     }
   };
   
-  const handleAddTask = () => {
-    if (!taskTitle || !category || !dueDate) {
+  const handleSubmit = () => {
+    if (!title || !dueDate) {
         toast({
             title: 'Missing Information',
-            description: 'Please fill out the title, category, and due date.',
+            description: 'Please fill out the title and due date.',
             variant: 'destructive',
         });
         return;
     }
     
-    onAddTask({
-        title: taskTitle,
-        dueDate: dueDate.toISOString(),
-        category,
+    const [hours, minutes] = time.split(':').map(Number);
+    const combinedDueDate = new Date(dueDate);
+    combinedDueDate.setHours(hours, minutes);
+
+    onTaskSubmit({
+        id: editingTask?.id,
+        title,
+        description,
+        dueDate: combinedDueDate.toISOString(),
         store: location,
     });
     
-    setTaskTitle('');
-    setCategory('');
-    setLocation('');
-    setDueDate(new Date());
-    setLocationSuggestions([]);
+    onOpenChange(false); // Close the sheet
   };
-
+  
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button size="sm" className="h-8 gap-1">
-          <PlusCircle className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">New Task</span>
-        </Button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Create a New Task</SheetTitle>
+          <SheetTitle>{editingTask ? 'Edit Task' : 'Create a New Task'}</SheetTitle>
           <SheetDescription>
-            Fill in the details below to add a new task to your list.
+            {editingTask ? 'Update the details of your task.' : 'Fill in the details below to add a new task to your list.'}
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Task Title</Label>
-            <Input id="title" placeholder="e.g., Buy groceries" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} />
+             <div className="flex items-center gap-2">
+                <Input id="title" placeholder="e.g., Buy groceries" value={title} onChange={(e) => setTitle(e.target.value)} />
+                 <Button variant="outline" size="icon" onClick={handleSuggestTitle} disabled={isSuggestingTitle}>
+                    <Wand2 className={cn("h-4 w-4", isSuggestingTitle && "animate-pulse")} />
+                </Button>
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea id="description" placeholder="Add any extra details here..." />
+            <Textarea id="description" placeholder="Add any extra details here..." value={description} onChange={e => setDescription(e.target.value)} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
@@ -307,21 +316,10 @@ function NewTaskSheet({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'stat
               </Popover>
             </div>
              <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" size="icon" onClick={handleSuggestCategory} disabled={isSuggestingCategory}>
-                    <Wand2 className={cn("h-4 w-4", isSuggestingCategory && "animate-pulse")} />
-                  </Button>
+                <Label htmlFor="time">Time</Label>
+                 <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="time" type="time" className="pl-8" value={time} onChange={e => setTime(e.target.value)} />
                 </div>
               </div>
           </div>
@@ -330,7 +328,7 @@ function NewTaskSheet({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'stat
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input id="location" placeholder="e.g., Downtown Mall" className="pl-8" value={location} onChange={handleLocationChange} />
-              {isSuggestingLocation && <div className="p-2 text-sm">Loading...</div>}
+              {isSuggestingLocation && <div className="p-2 text-sm text-center">Finding nearby places...</div>}
               {locationSuggestions.length > 0 && (
                 <div className="absolute z-10 w-full bg-card border rounded-md mt-1 shadow-lg">
                   {locationSuggestions.map((suggestion, index) => (
@@ -351,10 +349,8 @@ function NewTaskSheet({ onAddTask }: { onAddTask: (task: Omit<Task, 'id' | 'stat
           </div>
         </div>
         <SheetFooter>
-          <SheetClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </SheetClose>
-            <Button type="submit" onClick={handleAddTask}>Create Task</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" onClick={handleSubmit}>{editingTask ? 'Save Changes' : 'Create Task'}</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -367,7 +363,37 @@ export default function TasksPage() {
   const [filterCategories, setFilterCategories] = React.useState<string[]>(
     categories.map(c => c.name)
   );
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const [editingTask, setEditingTask] = React.useState<Task | null>(null);
 
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsSheetOpen(true);
+  };
+  
+  const handleNewTaskClick = () => {
+    setEditingTask(null);
+    setIsSheetOpen(true);
+  };
+
+  const handleTaskSubmit = (taskData: Omit<Task, 'id' | 'status' | 'completedAt' | 'category'> & { id?: string }) => {
+    if (taskData.id) { // Editing existing task
+        setTasks(prevTasks =>
+            prevTasks.map(task =>
+                task.id === taskData.id ? { ...task, ...taskData, category: task.category } : task
+            )
+        );
+    } else { // Adding new task
+        const newTask: Task = {
+            id: `task-${Date.now()}`,
+            status: 'pending',
+            category: 'Personal', // Default category or derive from somewhere
+            ...taskData,
+        };
+        setTasks(prevTasks => [newTask, ...prevTasks]);
+    }
+  };
+  
   const handleUpdateTask = (updatedTask: Task) => {
     setTasks(prevTasks =>
       prevTasks.map(task =>
@@ -378,15 +404,6 @@ export default function TasksPage() {
   
   const handleDeleteTask = (id: string) => {
     setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
-  };
-  
-  const handleAddTask = (newTaskData: Omit<Task, 'id' | 'status' | 'completedAt'>) => {
-    const newTask: Task = {
-        id: `task-${Date.now()}`,
-        status: 'pending',
-        ...newTaskData,
-    };
-    setTasks(prevTasks => [newTask, ...prevTasks]);
   };
 
   const onFilterChange = (category: string, checked: boolean) => {
@@ -415,6 +432,8 @@ export default function TasksPage() {
   const pendingTasks = filteredTasks.filter((task) => task.status === 'pending');
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
   const completedTasks = filteredTasks.filter((task) => task.status === 'completed');
+  
+  const pendingTasksWithLocationCount = pendingTasks.filter(t => t.store).length;
 
   return (
     <AlertDialog>
@@ -430,10 +449,12 @@ export default function TasksPage() {
             </TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation} disabled={pendingTasks.filter(t => t.store).length < 2}>
-              <Navigation className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Multi-Stop</span>
-            </Button>
+            {pendingTasksWithLocationCount >= 2 && (
+                <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation}>
+                  <Navigation className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Multi-Stop</span>
+                </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1">
@@ -455,7 +476,10 @@ export default function TasksPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <NewTaskSheet onAddTask={handleAddTask} />
+            <Button size="sm" className="h-8 gap-1" onClick={handleNewTaskClick}>
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">New Task</span>
+            </Button>
           </div>
         </div>
         <div className="relative mt-4">
@@ -470,33 +494,39 @@ export default function TasksPage() {
         <TabsContent value="all">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {filteredTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask}/>
+              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="pending">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {pendingTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />
+              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="today">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {todayTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />
+              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="completed">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {completedTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />
+              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
             ))}
           </div>
         </TabsContent>
       </Tabs>
     </div>
+     <NewTaskSheet 
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        onTaskSubmit={handleTaskSubmit}
+        editingTask={editingTask}
+      />
     </AlertDialog>
   );
 }
