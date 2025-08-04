@@ -1,80 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'PT Sans', sans-serif;
-}
-
 @layer base {
+  body {
+    @apply font-sans;
+  }
   :root {
-    --background: 0 0% 96.1%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 250 50% 70%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 175 33% 64%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 250 50% 70%;
-    --chart-1: 250 50% 70%;
-    --chart-2: 175 33% 64%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --background: 240 10% 97%; /* Light Gray */
+    --foreground: 240 6% 10%;
+    --card: 240 10% 100%;
+    --card-foreground: 240 6% 10%;
+    --popover: 240 10% 100%;
+    --popover-foreground: 240 6% 10%;
+    --primary: 255 75% 95%; /* Soft Lavender */
+    --primary-foreground: 255 5% 25%;
+    --secondary: 240 5% 90%;
+    --secondary-foreground: 240 5% 25%;
+    --muted: 240 5% 90%;
+    --muted-foreground: 240 4% 45%;
+    --accent: 174 44% 71%; /* Muted Teal */
+    --accent-foreground: 174 15% 25%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 174 44% 71%;
     --radius: 0.5rem;
-    --sidebar-background: 240 67% 97%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 250 50% 70%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 60% 94%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 240 5.9% 90%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --chart-1: 255 75% 95%;
+    --chart-2: 174 44% 71%;
+    --chart-3: 190 70% 80%;
+    --chart-4: 210 75% 85%;
+    --chart-5: 30 85% 90%;
   }
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 250 50% 70%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 175 33% 44%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 250 50% 70%;
-    --chart-1: 250 50% 70%;
-    --chart-2: 175 33% 64%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 3.7% 10.9%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 250 50% 70%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 240 6% 10%;
+    --foreground: 240 5% 95%;
+    --card: 240 6% 12%;
+    --card-foreground: 240 5% 95%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 240 5% 95%;
+    --primary: 255 70% 80%;
+    --primary-foreground: 255 5% 15%;
+    --secondary: 240 4% 20%;
+    --secondary-foreground: 240 5% 95%;
+    --muted: 240 4% 20%;
+    --muted-foreground: 240 4% 65%;
+    --accent: 174 40% 60%;
+    --accent-foreground: 174 5% 15%;
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 4% 25%;
+    --input: 240 4% 25%;
+    --ring: 174 40% 60%;
+    --chart-1: 255 70% 80%;
+    --chart-2: 174 40% 60%;
+    --chart-3: 190 65% 70%;
+    --chart-4: 210 70% 75%;
+    --chart-5: 30 80% 80%;
   }
 }
 
@@ -84,5 +69,7 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }

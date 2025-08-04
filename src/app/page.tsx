@@ -1,17 +1,17 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Zap, BrainCircuit, BarChart2 } from 'lucide-react';
+import { MapPin, Navigation, Zap, BrainCircuit } from 'lucide-react';
 import { AppLogo } from '@/components/icons';
 import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-background">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <AppLogo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold font-headline">G-Remind</h1>
+          <h1 className="text-2xl font-bold">GeoRemind</h1>
         </div>
         <nav className="flex items-center gap-4">
           <Button variant="ghost" asChild>
@@ -24,13 +24,13 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="relative py-20 md:py-32 bg-primary/10">
+        <section className="relative py-20 md:py-32 bg-card">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-4xl md:text-6xl font-bold font-headline text-primary-foreground-dark">
-              Organize your life, intelligently.
+            <h2 className="text-4xl md:text-6xl font-bold text-foreground">
+              Never forget a task at a location again.
             </h2>
             <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-muted-foreground">
-              G-Remind is more than just a to-do list. It's your personal assistant, learning your habits to help you stay productive and focused.
+              GeoRemind is your intelligent assistant for location-based tasks. Set reminders for places, and get notified when you're nearby.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
@@ -43,31 +43,31 @@ export default function Home() {
         <section className="py-20 md:py-24 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h3 className="text-3xl font-bold font-headline">Features that Power Your Productivity</h3>
+              <h3 className="text-3xl font-bold">A smarter way to manage your errands</h3>
               <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
-                From AI-powered suggestions to seamless organization, we've got you covered.
+                From AI-powered suggestions to optimized routing, we've got you covered.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               <FeatureCard
-                icon={<Zap className="h-8 w-8 text-primary" />}
-                title="Streamlined Task Input"
-                description="Quickly add tasks with our intuitive interface, including dates, locations, and recurring schedules."
+                icon={<MapPin className="h-8 w-8 text-primary" />}
+                title="Location-Based Tasks"
+                description="Create tasks and link them to specific locations. Get reminders when you're in the vicinity."
               />
               <FeatureCard
                 icon={<BrainCircuit className="h-8 w-8 text-primary" />}
-                title="AI Smart Suggestions"
-                description="Our AI suggests categories and optimal reschedule times, learning from your behavior to keep you on track."
+                title="AI Location Suggestions"
+                description="Start typing and our AI will suggest relevant locations, making task creation faster than ever."
               />
               <FeatureCard
-                icon={<CheckCircle className="h-8 w-8 text-primary" />}
-                title="Prioritized Views"
-                description="Focus on what matters with clear, organized views for pending, today's, and completed tasks."
+                icon={<Navigation className="h-8 w-8 text-primary" />}
+                title="Multi-Stop Navigation"
+                description="Plan your route efficiently. Get an optimized multi-stop route for all your pending tasks for the day."
               />
-              <FeatureCard
-                icon={<BarChart2 className="h-8 w-8 text-primary" />}
-                title="Analytics Dashboard"
-                description="Visualize your progress with insightful charts on completion trends and category breakdowns."
+               <FeatureCard
+                icon={<Zap className="h-8 w-8 text-primary" />}
+                title="Smart Task Management"
+                description="Organize your tasks with categories, due dates, and priorities. Stay on top of your to-do list."
               />
             </div>
           </div>
@@ -77,25 +77,25 @@ export default function Home() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
                     <div>
-                        <Image src="https://placehold.co/600x400.png" alt="App Screenshot" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface" />
+                        <Image src="https://placehold.co/600x400.png" alt="App Screenshot" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface map" />
                     </div>
                     <div>
-                        <h3 className="text-3xl font-bold font-headline">Work Smarter, Not Harder</h3>
+                        <h3 className="text-3xl font-bold">Designed for life on the go</h3>
                         <p className="mt-4 text-muted-foreground">
-                            G-Remind's clean, card-based layout and thoughtful design help you manage your tasks without the clutter. Enjoy a calm, focused workspace that adapts to your needs.
+                           GeoRemind's clean, intuitive interface helps you manage your location-based tasks without the clutter. Enjoy a calm, focused experience that adapts to your needs.
                         </p>
                         <ul className="mt-6 space-y-4">
                             <li className="flex items-start gap-3">
-                                <CheckCircle className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
-                                <span><span className="font-semibold">Dark & Light Modes:</span> Switch themes to match your environment and reduce eye strain.</span>
+                               <MapPin className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
+                                <span><span className="font-semibold">Geofencing Alerts:</span> Get smart notifications when you enter or leave a designated area for a task.</span>
                             </li>
                              <li className="flex items-start gap-3">
-                                <CheckCircle className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
-                                <span><span className="font-semibold">Location-Based Reminders:</span> Get notified when you're near a location where a task needs to be done.</span>
+                               <Navigation className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
+                                <span><span className="font-semibold">Optimized Routing:</span> Save time and fuel with the most efficient route for your day's errands.</span>
                             </li>
                              <li className="flex items-start gap-3">
-                                <CheckCircle className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
-                                <span><span className="font-semibold">Offline Support:</span> Your tasks are always available, syncing automatically when you're back online.</span>
+                               <Zap className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
+                                <span><span className="font-semibold">Seamless Sync:</span> Your tasks are always available across all your devices, syncing automatically.</span>
                             </li>
                         </ul>
                     </div>
@@ -104,9 +104,9 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="bg-background border-t">
+      <footer className="bg-card border-t">
         <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} G-Remind. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} GeoRemind. All rights reserved.</p>
         </div>
       </footer>
     </div>
@@ -115,12 +115,12 @@ export default function Home() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <Card className="text-center bg-card hover:shadow-lg transition-shadow">
+    <Card className="text-center bg-card hover:shadow-lg transition-shadow border-transparent hover:border-primary">
       <CardHeader>
         <div className="mx-auto bg-primary/10 rounded-full h-16 w-16 flex items-center justify-center">
           {icon}
         </div>
-        <CardTitle className="mt-4 font-headline">{title}</CardTitle>
+        <CardTitle className="mt-4">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground">{description}</p>

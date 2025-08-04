@@ -6,6 +6,8 @@ export const categories: Category[] = [
   { id: 'cat3', name: 'Personal' },
   { id: 'cat4', name: 'Health' },
   { id: 'cat5', name: 'Home' },
+  { id: 'cat6', name: 'Shopping' },
+  { id: 'cat7', name: 'Errands' },
 ];
 
 export const tasks: Task[] = [];

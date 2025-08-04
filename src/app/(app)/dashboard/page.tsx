@@ -61,7 +61,7 @@ export default function DashboardPage() {
     <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
       <Card className="xl:col-span-2">
         <CardHeader>
-          <CardTitle className="font-headline">This Week's Completion Trend</CardTitle>
+          <CardTitle>This Week's Completion Trend</CardTitle>
           <CardDescription>Tasks completed over the last 7 days.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Category Breakdown</CardTitle>
+          <CardTitle>Category Breakdown</CardTitle>
           <CardDescription>How your tasks are distributed.</CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
@@ -109,7 +109,7 @@ export default function DashboardPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Today's Progress</CardTitle>
+          <CardTitle>Today's Progress</CardTitle>
           <CardDescription>
             You've completed {completedToday} out of {totalToday} tasks today.
           </CardDescription>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Productivity Streak</CardTitle>
+          <CardTitle>Productivity Streak</CardTitle>
           <CardDescription>Keep it going!</CardDescription>
         </CardHeader>
         <CardContent>
