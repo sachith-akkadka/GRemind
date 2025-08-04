@@ -36,8 +36,9 @@ const prompt = ai.definePrompt({
   For example, if the task is "Return library books", you should suggest "Anytown Public Library".
   If the task is "Buy nails and a hammer", you should suggest "Home Depot" or "Lowe's".
   If the task is "Pick up prescription", you should suggest "CVS Pharmacy" or "Walgreens".
+  If the task is "Get coffee", you should suggest "Starbucks" or "Peet's Coffee".
 
-  Do not include a city or state. Just provide the name of the business or place.
+  Do not include a city or state. Just provide the name of the business or place. Be specific and realistic.
 
   Task Title: {{{taskTitle}}}
   `,

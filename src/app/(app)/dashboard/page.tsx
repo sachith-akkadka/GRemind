@@ -7,14 +7,9 @@ import { Progress } from '@/components/ui/progress';
 import { ChartContainer, ChartTooltipContent, ChartTooltip, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 
-const completionData = [
-  { day: 'Mon', completed: 4 },
-  { day: 'Tue', completed: 6 },
-  { day: 'Wed', completed: 3 },
-  { day: 'Thu', completed: 5 },
-  { day: 'Fri', completed: 7 },
-  { day: 'Sat', completed: 2 },
-  { day: 'Sun', completed: 4 },
+const completionData: any[] = [
+  // Example structure, will be empty
+  // { day: 'Mon', completed: 0 },
 ];
 
 const barChartConfig = {
@@ -24,38 +19,20 @@ const barChartConfig = {
 	},
 } satisfies ChartConfig
 
-const categoryData = [
-  { name: 'Work', value: 400, fill: 'hsl(var(--chart-1))' },
-  { name: 'Personal', value: 300, fill: 'hsl(var(--chart-2))' },
-  { name: 'Groceries', value: 300, fill: 'hsl(var(--chart-3))' },
-  { name: 'Health', value: 200, fill: 'hsl(var(--chart-4))' },
+const categoryData: any[] = [
+    // Example structure, will be empty
+    // { name: 'Work', value: 0, fill: 'hsl(var(--chart-1))' },
 ];
 const pieChartConfig = {
   tasks: {
     label: "Tasks",
   },
-  work: {
-    label: "Work",
-    color: "hsl(var(--chart-1))",
-  },
-  personal: {
-    label: "Personal",
-    color: "hsl(var(--chart-2))",
-  },
-  groceries: {
-    label: "Groceries",
-    color: "hsl(var(--chart-3))",
-  },
-  health: {
-    label: "Health",
-    color: "hsl(var(--chart-4))",
-  },
 } satisfies ChartConfig
 
 export default function DashboardPage() {
-  const completedToday = 3;
-  const totalToday = 5;
-  const completionPercentage = (completedToday / totalToday) * 100;
+  const completedToday = 0;
+  const totalToday = 0;
+  const completionPercentage = 0;
 
   return (
     <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
@@ -66,6 +43,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <ChartContainer config={barChartConfig} className="h-64">
+            {completionData.length > 0 ? (
              <BarChart accessibilityLayer data={completionData}>
               <CartesianGrid vertical={false} />
               <XAxis
@@ -81,6 +59,11 @@ export default function DashboardPage() {
               />
               <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
             </BarChart>
+            ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                    No task data for this week yet.
+                </div>
+            )}
           </ChartContainer>
         </CardContent>
       </Card>
@@ -92,6 +75,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="flex justify-center">
             <ChartContainer config={pieChartConfig} className="h-64">
+             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                       <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
@@ -103,6 +87,11 @@ export default function DashboardPage() {
                       <ChartLegend content={<ChartLegendContent nameKey="name" />} />
                   </RechartsPieChart>
               </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                    No categories to display.
+                </div>
+              )}
             </ChartContainer>
         </CardContent>
       </Card>
@@ -131,7 +120,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-6xl font-bold text-primary">12</span>
+            <span className="text-6xl font-bold text-primary">0</span>
             <span className="text-xl text-muted-foreground">days</span>
           </div>
         </CardContent>
