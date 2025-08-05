@@ -235,7 +235,6 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
   const [debouncedTitle, setDebouncedTitle] = React.useState(title);
   const [isTitleSuggestionUsed, setIsTitleSuggestionUsed] = React.useState(false);
 
-
   React.useEffect(() => {
     if (open) { 
         if (editingTask) {
@@ -327,7 +326,8 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
     };
     
     fetchSuggestions();
-  }, [debouncedTitle, location, toast, isTitleSuggestionUsed, title, open]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedTitle, open]);
   
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation(e.target.value);
@@ -422,7 +422,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
                         </SelectContent>
                     </Select>
                     <Select value={minute} onValueChange={setMinute}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
                         <SelectContent>
                             {['00', '15', '30', '45'].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                         </SelectContent>
