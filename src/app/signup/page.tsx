@@ -31,13 +31,21 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { displayName: name });
+      }
       toast({ title: 'Account created successfully!' });
       router.push('/tasks');
     } catch (error: any) {
+      let description = 'An unexpected error occurred. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        description = 'This email is already in use. Please log in instead.';
+      } else if (error.code === 'auth/weak-password') {
+        description = 'The password is too weak. Please use a stronger password.';
+      }
       toast({
         title: 'Sign Up Failed',
-        description: error.message,
+        description: description,
         variant: 'destructive',
       });
     } finally {
