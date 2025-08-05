@@ -729,7 +729,6 @@ export default function TasksPage() {
           <TabsList>
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
             {actionableTasksWithLocationCount >= 2 && (
@@ -770,13 +769,6 @@ export default function TasksPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
         </div>
-        <TabsContent value="all">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-            {filteredTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
-            ))}
-          </div>
-        </TabsContent>
         <TabsContent value="pending">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {pendingTasks.map((task) => (
