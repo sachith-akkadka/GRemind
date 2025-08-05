@@ -491,12 +491,15 @@ export default function TasksPage() {
       const tasksData: Task[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        tasksData.push({
-          id: doc.id,
-          ...data,
-          dueDate: (data.dueDate as Timestamp).toDate().toISOString(),
-          completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
-        } as Task);
+        // Filter out completed tasks from the main view
+        if (data.status !== 'completed') {
+            tasksData.push({
+                id: doc.id,
+                ...data,
+                dueDate: (data.dueDate as Timestamp).toDate().toISOString(),
+                completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
+            } as Task);
+        }
       });
       setTasks(tasksData);
     });
@@ -565,22 +568,18 @@ export default function TasksPage() {
 
   const pendingTasks = filteredTasks.filter((task) => task.status === 'pending');
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
-  const completedTasks = filteredTasks.filter((task) => task.status === 'completed');
   
   const actionableTasksWithLocationCount = tasks.filter(t => (t.status === 'pending' || t.status === 'today') && t.store).length;
 
   return (
     <AlertDialog>
     <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 relative">
-      <Tabs defaultValue="all">
+      <Tabs defaultValue="today">
         <div className="flex items-center">
           <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="today">Today</TabsTrigger>
-            <TabsTrigger value="completed" className="hidden sm:flex">
-              Completed
-            </TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="all">All</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
             {actionableTasksWithLocationCount >= 2 && (
@@ -638,13 +637,6 @@ export default function TasksPage() {
         <TabsContent value="today">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {todayTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="completed">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-            {completedTasks.map((task) => (
               <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
             ))}
           </div>
