@@ -55,7 +55,9 @@ export const findNearbyPlacesTool = ai.defineTool(
     const { output } = await ai.generate({
       prompt: `You are a simulated Maps API. Based on the search query "${input.query}" near "${input.userLocation}", generate a list of 3 to 5 plausible, real-world business names with realistic-looking street addresses and estimated travel times (ETAs).
 
-      IMPORTANT: The results MUST be sorted by proximity, from the closest location to the farthest. The ETAs should reflect this, starting with shorter times (e.g., "5 mins", "8 mins") and increasing for subsequent results (e.g., "15 mins", "20 mins").
+      VERY IMPORTANT: The results MUST be located within the city or area of "${input.userLocation}". Do NOT include results from other cities, even if they are nearby. For example, if the location is "Puttur", only provide results in Puttur, not Mangalore.
+
+      The results MUST be sorted by proximity, from the closest location to the farthest. The ETAs should reflect this, starting with shorter times (e.g., "5 mins", "8 mins") and increasing for subsequent results (e.g., "15 mins", "20 mins").
 
       For example, if the query is "coffee shop" near "Palo Alto, CA", a good response would be a JSON object like:
       {
