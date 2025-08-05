@@ -234,6 +234,8 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
   const [debouncedTitle, setDebouncedTitle] = React.useState(title);
+  const [isTitleSuggestionUsed, setIsTitleSuggestionUsed] = React.useState(false);
+
 
   React.useEffect(() => {
     if (open) { 
@@ -260,13 +262,14 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
             setLocation('');
         }
         setLocationSuggestions([]);
+        setIsTitleSuggestionUsed(false);
     }
   }, [open, editingTask]);
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedTitle(title);
-    }, 500); // 500ms debounce delay
+    }, 500);
 
     return () => {
       clearTimeout(handler);
@@ -275,6 +278,22 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
 
   React.useEffect(() => {
     const fetchSuggestions = async () => {
+      if (debouncedTitle.split(' ').length > 1 && !isTitleSuggestionUsed) {
+        try {
+          const result = await suggestTaskTitle({});
+          if (result.suggestedTitle && result.suggestedTitle !== title) {
+            setTitle(result.suggestedTitle);
+            setIsTitleSuggestionUsed(true); // Prevent re-triggering
+            toast({
+              title: "We've completed your thought!",
+              description: `Task title set to: "${result.suggestedTitle}"`,
+            });
+          }
+        } catch (error) {
+            console.error('Title suggestion failed:', error);
+        }
+      }
+      
       if (debouncedTitle.length > 3 && !location) {
         setIsSuggestingLocation(true);
         try {
@@ -305,8 +324,11 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
         setLocationSuggestions([]);
       }
     };
-    fetchSuggestions();
-  }, [debouncedTitle, location, toast]);
+    
+    if (debouncedTitle) {
+      fetchSuggestions();
+    }
+  }, [debouncedTitle, location, toast, isTitleSuggestionUsed, title]);
 
   
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
