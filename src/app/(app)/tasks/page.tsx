@@ -219,51 +219,65 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   );
 }
 
-function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open: boolean, onOpenChange: (open: boolean) => void, onTaskSubmit: (task: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string }) => void, editingTask: Task | null }) {
+function NewTaskSheet({
+  open,
+  onOpenChange,
+  onTaskSubmit,
+  editingTask,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onTaskSubmit: (
+    task: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string }
+  ) => void;
+  editingTask: Task | null;
+}) {
   const { toast } = useToast();
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
-  
+
   const [hour, setHour] = React.useState('09');
   const [minute, setMinute] = React.useState('00');
   const [ampm, setAmpm] = React.useState('AM');
 
   const [location, setLocation] = React.useState('');
-  const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
+  const [locationSuggestions, setLocationSuggestions] = React.useState<
+    SuggestLocationsOutput['suggestions']
+  >([]);
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
   const [debouncedTitle, setDebouncedTitle] = React.useState(title);
-  const [isTitleSuggestionUsed, setIsTitleSuggestionUsed] = React.useState(false);
 
+  // Set initial state when editing or creating a new task
   React.useEffect(() => {
-    if (open) { 
-        if (editingTask) {
-            setTitle(editingTask.title);
-            setDescription(editingTask.description || '');
-            const taskDueDate = parseISO(editingTask.dueDate);
-            setDueDate(taskDueDate);
-            const formattedHour = format(taskDueDate, 'hh');
-            const formattedMinute = format(taskDueDate, 'mm');
-            const formattedAmPm = format(taskDueDate, 'aa');
-            setHour(formattedHour);
-            setMinute(formattedMinute);
-            setAmpm(formattedAmPm.toUpperCase());
-            setLocation(editingTask.store || '');
-        } else {
-            setTitle('');
-            setDescription('');
-            const now = new Date();
-            setDueDate(now);
-            setHour(format(now, 'hh'));
-            setMinute('00'); 
-            setAmpm(format(now, 'aa').toUpperCase());
-            setLocation('');
-        }
-        setLocationSuggestions([]);
-        setIsTitleSuggestionUsed(false);
+    if (open) {
+      if (editingTask) {
+        setTitle(editingTask.title);
+        setDescription(editingTask.description || '');
+        const taskDueDate = parseISO(editingTask.dueDate);
+        setDueDate(taskDueDate);
+        const formattedHour = format(taskDueDate, 'hh');
+        const formattedMinute = format(taskDueDate, 'mm');
+        const formattedAmPm = format(taskDueDate, 'aa');
+        setHour(formattedHour);
+        setMinute(formattedMinute);
+        setAmpm(formattedAmPm.toUpperCase());
+        setLocation(editingTask.store || '');
+      } else {
+        setTitle('');
+        setDescription('');
+        const now = new Date();
+        setDueDate(now);
+        setHour(format(now, 'hh'));
+        setMinute('00');
+        setAmpm(format(now, 'aa').toUpperCase());
+        setLocation('');
+      }
+      setLocationSuggestions([]);
     }
   }, [open, editingTask]);
-  
+
+  // Debounce the title input
   React.useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedTitle(title);
@@ -274,26 +288,28 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
     };
   }, [title]);
 
+  // AI Suggestions Effect
   React.useEffect(() => {
     if (!debouncedTitle || !open) return;
 
     const fetchSuggestions = async () => {
-      if (debouncedTitle.split(' ').length > 1 && !isTitleSuggestionUsed) {
+      // Title suggestion logic
+      if (debouncedTitle.split(' ').length > 1) {
         try {
           const result = await suggestTaskTitle({});
           if (result.suggestedTitle && result.suggestedTitle !== title) {
             setTitle(result.suggestedTitle);
-            setIsTitleSuggestionUsed(true);
             toast({
               title: "We've completed your thought!",
               description: `Task title set to: "${result.suggestedTitle}"`,
             });
           }
         } catch (error) {
-            console.error('Title suggestion failed:', error);
+          console.error('Title suggestion failed:', error);
         }
       }
-      
+
+      // Location suggestion logic
       if (debouncedTitle.length > 3 && !location) {
         setIsSuggestingLocation(true);
         try {
@@ -303,15 +319,15 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
             const bestSuggestion = result.suggestions[0];
             setLocation(`${bestSuggestion.name}, ${bestSuggestion.address}`);
             toast({
-                title: 'Location Suggested',
-                description: `We've set the location to ${bestSuggestion.name} based on your task title.`,
+              title: 'Location Suggested',
+              description: `We've set the location to ${bestSuggestion.name} based on your task title.`,
             });
           }
         } catch (error) {
-          console.error("Location suggestion failed", error);
+          console.error('Location suggestion failed', error);
           setLocationSuggestions([]);
           if (error instanceof Error && error.message.includes('429')) {
-            toast({
+             toast({
                 title: 'Rate Limit Exceeded',
                 description: 'You are making too many requests. Please wait a moment and try again.',
                 variant: 'destructive',
@@ -324,31 +340,32 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
         setLocationSuggestions([]);
       }
     };
-    
+
     fetchSuggestions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedTitle, open]);
-  
+
+
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation(e.target.value);
   };
-  
+
   const handleSubmit = () => {
     if (!title || !dueDate) {
-        toast({
-            title: 'Missing Information',
-            description: 'Please fill out the title and due date.',
-            variant: 'destructive',
-        });
-        return;
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill out the title and due date.',
+        variant: 'destructive',
+      });
+      return;
     }
-    
+
     let hours = parseInt(hour, 10);
     if (ampm === 'PM' && hours < 12) {
-        hours += 12;
+      hours += 12;
     }
     if (ampm === 'AM' && hours === 12) {
-        hours = 0;
+      hours = 0;
     }
 
     const combinedDueDate = new Date(dueDate);
@@ -357,37 +374,55 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
     const newStatus = isToday(combinedDueDate) ? 'today' : 'pending';
 
     onTaskSubmit({
-        id: editingTask?.id,
-        title,
-        description,
-        dueDate: Timestamp.fromDate(combinedDueDate),
-        store: location,
-        status: editingTask ? (isToday(combinedDueDate) ? 'today' : editingTask.status) : newStatus,
-        category: editingTask?.category || 'Personal',
+      id: editingTask?.id,
+      title,
+      description,
+      dueDate: Timestamp.fromDate(combinedDueDate),
+      store: location,
+      status: editingTask
+        ? isToday(combinedDueDate)
+          ? 'today'
+          : editingTask.status
+        : newStatus,
+      category: editingTask?.category || 'Personal',
     });
-    
+
     onOpenChange(false);
   };
-  
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{editingTask ? 'Edit Task' : 'Create a New Task'}</SheetTitle>
+          <SheetTitle>
+            {editingTask ? 'Edit Task' : 'Create a New Task'}
+          </SheetTitle>
           <SheetDescription>
-            {editingTask ? 'Update the details of your task.' : 'Fill in the details below to add a new task to your list.'}
+            {editingTask
+              ? 'Update the details of your task.'
+              : 'Fill in the details below to add a new task to your list.'}
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Task Title</Label>
-             <div className="flex items-center gap-2">
-                <Input id="title" placeholder="e.g., Buy groceries" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <div className="flex items-center gap-2">
+              <Input
+                id="title"
+                placeholder="e.g., Buy groceries"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
             </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea id="description" placeholder="Add any extra details here..." value={description} onChange={e => setDescription(e.target.value)} />
+            <Textarea
+              id="description"
+              placeholder="Add any extra details here..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
@@ -406,43 +441,73 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </div>
-             <div className="grid gap-2">
-                <Label>Time</Label>
-                 <div className="flex items-center gap-2">
-                    <Select value={hour} onValueChange={setHour}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
-                        <SelectContent>
-                            {Array.from({ length: 12 }, (_, i) => (
-                                <SelectItem key={i + 1} value={(i + 1).toString().padStart(2, '0')}>{(i + 1).toString().padStart(2, '0')}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={minute} onValueChange={setMinute}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
-                        <SelectContent>
-                            {['00', '15', '30', '45'].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                     <Select value={ampm} onValueChange={setAmpm}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="AM">AM</SelectItem>
-                            <SelectItem value="PM">PM</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+            <div className="grid gap-2">
+              <Label>Time</Label>
+              <div className="flex items-center gap-2">
+                <Select value={hour} onValueChange={setHour}>
+                  <SelectTrigger className="w-1/3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem
+                        key={i + 1}
+                        value={(i + 1).toString().padStart(2, '0')}
+                      >
+                        {(i + 1).toString().padStart(2, '0')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={minute} onValueChange={setMinute}>
+                  <SelectTrigger className="w-1/3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['00', '15', '30', '45'].map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={ampm} onValueChange={setAmpm}>
+                  <SelectTrigger className="w-1/3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AM">AM</SelectItem>
+                    <SelectItem value="PM">PM</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="location">Location (Optional)</Label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input id="location" placeholder="e.g., Downtown Mall" className="pl-8" value={location} onChange={handleLocationChange} />
-              {isSuggestingLocation && <div className="p-2 text-sm text-center text-muted-foreground">Finding nearby places...</div>}
+              <Input
+                id="location"
+                placeholder="e.g., Downtown Mall"
+                className="pl-8"
+                value={location}
+                onChange={handleLocationChange}
+              />
+              {isSuggestingLocation && (
+                <div className="p-2 text-sm text-center text-muted-foreground">
+                  Finding nearby places...
+                </div>
+              )}
               {locationSuggestions.length > 0 && (
                 <div className="absolute z-10 w-full bg-card border rounded-md mt-1 shadow-lg max-h-48 overflow-y-auto">
                   {locationSuggestions.map((suggestion, index) => (
@@ -450,13 +515,19 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
                       key={index}
                       className="p-3 hover:bg-muted cursor-pointer border-b"
                       onClick={() => {
-                        setLocation(`${suggestion.name}, ${suggestion.address}`);
+                        setLocation(
+                          `${suggestion.name}, ${suggestion.address}`
+                        );
                         setLocationSuggestions([]);
                       }}
                     >
                       <p className="font-semibold">{suggestion.name}</p>
-                      <p className="text-sm text-muted-foreground">{suggestion.address}</p>
-                      <p className="text-xs text-primary font-medium">{suggestion.eta} away</p>
+                      <p className="text-sm text-muted-foreground">
+                        {suggestion.address}
+                      </p>
+                      <p className="text-xs text-primary font-medium">
+                        {suggestion.eta} away
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -465,13 +536,18 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
           </div>
         </div>
         <SheetFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" onClick={handleSubmit}>{editingTask ? 'Save Changes' : 'Create Task'}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" onClick={handleSubmit}>
+            {editingTask ? 'Save Changes' : 'Create Task'}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
   );
 }
+
 
 export default function TasksPage() {
   const { user } = useAuth();
