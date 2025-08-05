@@ -203,7 +203,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this task.
+            This action cannot be undone. This will mark the task as completed and move it to your history.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -472,6 +472,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
 
 export default function TasksPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filterCategories, setFilterCategories] = React.useState<string[]>(
@@ -540,7 +541,11 @@ export default function TasksPage() {
   
   const handleDeleteTask = async (id: string) => {
     const taskRef = doc(db, 'tasks', id);
-    await deleteDoc(taskRef);
+    await updateDoc(taskRef, { status: 'completed', completedAt: Timestamp.now() });
+    toast({
+        title: "Task Deleted",
+        description: "The task has been moved to your history.",
+    });
   };
 
   const onFilterChange = (category: string, checked: boolean) => {
