@@ -142,6 +142,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   };
 
   return (
+    <AlertDialog>
     <Card>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
@@ -163,12 +164,13 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
                   Mark as Done
                 </DropdownMenuItem>
               )}
-               <AlertDialogTrigger asChild>
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
+               <DropdownMenuItem 
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDeleteTask(task.id)}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
-              </AlertDialogTrigger>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -207,24 +209,8 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
           </Button>
         </CardFooter>
       )}
-       <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the task.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive hover:bg-destructive/90"
-            onClick={() => onDeleteTask(task.id)}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
     </Card>
+    </AlertDialog>
   );
 }
 
@@ -749,7 +735,7 @@ export default function TasksPage() {
   const actionableTasksWithLocationCount = tasks.filter(t => (t.status === 'pending' || t.status === 'today') && t.store).length;
 
   return (
-    <AlertDialog>
+    <>
     <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 relative">
       <Tabs defaultValue="today">
         <div className="flex items-center">
@@ -837,6 +823,6 @@ export default function TasksPage() {
         editingTask={editingTask}
         userLocation={userLocation}
       />
-    </AlertDialog>
+    </>
   );
 }
