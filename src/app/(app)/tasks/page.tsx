@@ -71,6 +71,7 @@ import { format, parseISO, isToday, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
 import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
+import { findTaskLocation } from '@/ai/flows/find-task-location';
 import {
   Select,
   SelectContent,
@@ -99,6 +100,8 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
     missed: 'destructive',
   } as const;
   const { toast } = useToast();
+  const [isNavigating, setIsNavigating] = React.useState(false);
+
 
   const handleMarkAsDone = () => {
     onUpdateTask(task.id, { status: 'completed', completedAt: Timestamp.now() });
@@ -109,12 +112,33 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   };
   
   const handleStartNavigation = async () => {
-    if (!task.store) {
-        toast({ title: "No Location", description: "This task doesn't have a location set.", variant: "destructive" });
-        return;
+    setIsNavigating(true);
+    let destination = task.store;
+
+    if (!destination) {
+        toast({ title: "Finding location...", description: `Searching for a place to complete "${task.title}"...` });
+        try {
+            const locationResult = await findTaskLocation({ taskTitle: task.title });
+            if (locationResult) {
+                destination = `${locationResult.name}, ${locationResult.address}`;
+                // Optionally, update the task with the found location
+                onUpdateTask(task.id, { store: destination });
+            } else {
+                 toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive" });
+                 setIsNavigating(false);
+                 return;
+            }
+        } catch(error) {
+            console.error("Error finding location:", error);
+            toast({ title: "Error", description: "Failed to find a location.", variant: "destructive" });
+            setIsNavigating(false);
+            return;
+        }
     }
-    const query = encodeURIComponent(task.store);
+
+    const query = encodeURIComponent(destination);
     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    setIsNavigating(false);
   };
 
   return (
@@ -177,8 +201,9 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
       </CardContent>
       {task.status !== 'completed' && (
         <CardFooter className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={handleStartNavigation}>
-            <Navigation className="mr-2 h-4 w-4" /> Start Navigation
+          <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
+             {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
+             {isNavigating ? 'Finding...' : 'Start Navigation'}
           </Button>
         </CardFooter>
       )}
