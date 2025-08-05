@@ -508,7 +508,7 @@ export default function TasksPage() {
 
   return (
     <AlertDialog>
-    <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+    <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 relative">
       <Tabs defaultValue="all">
         <div className="flex items-center">
           <TabsList>
@@ -547,10 +547,6 @@ export default function TasksPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" className="h-8 gap-1" onClick={handleNewTaskClick}>
-                <PlusCircle className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">New Task</span>
-            </Button>
           </div>
         </div>
         <div className="relative mt-4">
@@ -591,6 +587,16 @@ export default function TasksPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Button
+        size="icon"
+        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg"
+        onClick={handleNewTaskClick}
+      >
+        <PlusCircle className="h-6 w-6" />
+        <span className="sr-only">New Task</span>
+      </Button>
+
     </div>
      <NewTaskSheet 
         open={isSheetOpen}
@@ -601,4 +607,3 @@ export default function TasksPage() {
     </AlertDialog>
   );
 }
-
