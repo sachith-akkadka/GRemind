@@ -11,7 +11,7 @@ export default function Home() {
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <AppLogo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold">GeoRemind</h1>
+          <h1 className="text-2xl font-bold">G-Remind</h1>
         </div>
         <nav className="flex items-center gap-4">
           <Button variant="ghost" asChild>
@@ -30,7 +30,7 @@ export default function Home() {
               Never forget a task at a location again.
             </h2>
             <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-muted-foreground">
-              GeoRemind is your intelligent assistant for location-based tasks. Set reminders for places, and get notified when you're nearby.
+              G-Remind is your intelligent assistant for location-based tasks. Set reminders for places, and get notified when you're nearby.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
@@ -82,7 +82,7 @@ export default function Home() {
                     <div>
                         <h3 className="text-3xl font-bold">Designed for life on the go</h3>
                         <p className="mt-4 text-muted-foreground">
-                           GeoRemind's clean, intuitive interface helps you manage your location-based tasks without the clutter. Enjoy a calm, focused experience that adapts to your needs.
+                           G-Remind's clean, intuitive interface helps you manage your location-based tasks without the clutter. Enjoy a calm, focused experience that adapts to your needs.
                         </p>
                         <ul className="mt-6 space-y-4">
                             <li className="flex items-start gap-3">
@@ -106,7 +106,7 @@ export default function Home() {
 
       <footer className="bg-card border-t">
         <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} GeoRemind. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} G-Remind. All rights reserved.</p>
         </div>
       </footer>
     </div>
