@@ -57,7 +57,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTaskTitle } from '@/ai/flows/suggest-task-title';
-import { suggestLocations } from '@/ai/flows/suggest-locations';
+import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
 import { suggestTaskLocation } from '@/ai/flows/suggest-task-location';
 import {
   Select,
@@ -100,6 +100,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
     if (!destination) {
       // If no location, use AI to suggest one based on the title
       try {
+        toast({ title: "Finding a location..." });
         const result = await suggestTaskLocation({ taskTitle: task.title });
         if (result.suggestedLocation) {
           destination = result.suggestedLocation;
@@ -217,7 +218,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
   const [ampm, setAmpm] = React.useState('AM');
 
   const [location, setLocation] = React.useState('');
-  const [locationSuggestions, setLocationSuggestions] = React.useState<string[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
   const [isSuggestingTitle, setIsSuggestingTitle] = React.useState(false);
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
 
@@ -246,6 +247,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
             setAmpm(format(now, 'aa').toUpperCase());
             setLocation('');
         }
+        setLocationSuggestions([]);
     }
   }, [open, editingTask]);
 
@@ -381,7 +383,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
                     <Select value={minute} onValueChange={setMinute}>
                         <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                            {Array.from({ length: 60 }, (_, i) => i).map(m => <SelectItem key={m} value={m.toString().padStart(2, '0')}>{m.toString().padStart(2, '0')}</SelectItem>)}
+                            {['00', '15', '30', '45'].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                         </SelectContent>
                     </Select>
                      <Select value={ampm} onValueChange={setAmpm}>
@@ -401,17 +403,19 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
               <Input id="location" placeholder="e.g., Downtown Mall" className="pl-8" value={location} onChange={handleLocationChange} />
               {isSuggestingLocation && <div className="p-2 text-sm text-center text-muted-foreground">Finding nearby places...</div>}
               {locationSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full bg-card border rounded-md mt-1 shadow-lg">
+                <div className="absolute z-10 w-full bg-card border rounded-md mt-1 shadow-lg max-h-48 overflow-y-auto">
                   {locationSuggestions.map((suggestion, index) => (
                     <div
                       key={index}
-                      className="p-2 hover:bg-muted cursor-pointer"
+                      className="p-3 hover:bg-muted cursor-pointer border-b"
                       onClick={() => {
-                        setLocation(suggestion);
+                        setLocation(`${suggestion.name}, ${suggestion.address}`);
                         setLocationSuggestions([]);
                       }}
                     >
-                      {suggestion}
+                      <p className="font-semibold">{suggestion.name}</p>
+                      <p className="text-sm text-muted-foreground">{suggestion.address}</p>
+                      <p className="text-xs text-primary font-medium">{suggestion.eta} away</p>
                     </div>
                   ))}
                 </div>
@@ -590,7 +594,7 @@ export default function TasksPage() {
 
       <Button
         size="icon"
-        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg"
+        className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-lg"
         onClick={handleNewTaskClick}
       >
         <PlusCircle className="h-10 w-10" />

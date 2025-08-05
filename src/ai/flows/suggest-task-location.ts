@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { findNearbyPlacesTool } from '../tools/location-tools';
 
 const SuggestTaskLocationInputSchema = z.object({
   taskTitle: z.string().describe("The title of the user's task."),
@@ -17,7 +18,7 @@ const SuggestTaskLocationInputSchema = z.object({
 export type SuggestTaskLocationInput = z.infer<typeof SuggestTaskLocationInputSchema>;
 
 const SuggestTaskLocationOutputSchema = z.object({
-  suggestedLocation: z.string().describe('A single, relevant, real-world business name or landmark for the task. Example: "Home Depot" or "Walgreens".'),
+  suggestedLocation: z.string().describe('A single, relevant, real-world business name and its address for the task. Example: "Home Depot, 123 Main St, Anytown".'),
 });
 export type SuggestTaskLocationOutput = z.infer<typeof SuggestTaskLocationOutputSchema>;
 
@@ -27,33 +28,42 @@ export async function suggestTaskLocation(
   return suggestTaskLocationFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'suggestTaskLocationPrompt',
-  input: {schema: SuggestTaskLocationInputSchema},
-  output: {schema: SuggestTaskLocationOutputSchema},
-  prompt: `You are an expert at understanding tasks and suggesting relevant, real-world locations.
-  Based on the task title, suggest a single, highly relevant business name or landmark where the user could complete the task.
-  For example, if the task is "Return library books", you should suggest "Anytown Public Library".
-  If the task is "Buy nails and a hammer", you should suggest "Home Depot" or "Lowe's".
-  If the task is "Pick up prescription", you should suggest "CVS Pharmacy" or "Walgreens".
-  If the task is "Get coffee", you should suggest "Starbucks" or "Peet's Coffee".
-
-  Do not include a city or state. Just provide the name of the business or place. Be specific and realistic.
-
-  Task Title: {{{taskTitle}}}
-  `,
-});
-
 const suggestTaskLocationFlow = ai.defineFlow(
   {
     name: 'suggestTaskLocationFlow',
     inputSchema: SuggestTaskLocationInputSchema,
     outputSchema: SuggestTaskLocationOutputSchema,
+    tools: [findNearbyPlacesTool],
   },
-  async input => {
-    // In a real app, you could use a tool here to call a Maps API and find the *nearest* relevant location.
-    // For this prototype, we'll use an LLM to generate a plausible type of location.
-    const {output} = await prompt(input);
-    return output!;
+  async (input) => {
+    const prompt = `You are an expert at understanding tasks and suggesting relevant, real-world locations.
+      Based on the task title "${input.taskTitle}", determine the type of place the user might need to go (e.g., "hardware store", "coffee shop", "library").
+      Then, use the findNearbyPlacesTool to find a specific, relevant business or landmark. The user's location is "Mountain View, CA".
+      From the tool's output, select the TOP suggestion and return its name and address as the suggestedLocation.
+      For example, if the task is "Return library books", you should suggest a specific library address.
+      If the task is "Buy nails and a hammer", you should suggest a specific hardware store.
+    `;
+
+    const { output } = await ai.generate({
+      prompt: prompt,
+      tools: [findNearbyPlacesTool],
+      model: 'googleai/gemini-2.0-flash'
+    });
+
+    if (!output || !output.toolRequests?.length) {
+      // If the model doesn't use the tool, fall back to a simple suggestion
+      return { suggestedLocation: 'Could not determine a specific location.' };
+    }
+
+    // Execute the tool call
+    const toolRequest = output.toolRequests[0];
+    const toolResult = await toolRequest.executor(toolRequest.input);
+
+    if (toolResult.places && toolResult.places.length > 0) {
+      const bestPlace = toolResult.places[0];
+      return { suggestedLocation: `${bestPlace.name}, ${bestPlace.address}` };
+    }
+
+    return { suggestedLocation: 'No specific locations found.' };
   }
 );

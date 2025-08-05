@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { findNearbyPlacesTool } from '../tools/location-tools';
 
 const SuggestLocationsInputSchema = z.object({
   query: z.string().describe('The user\'s search query for a location.'),
@@ -17,7 +18,11 @@ const SuggestLocationsInputSchema = z.object({
 export type SuggestLocationsInput = z.infer<typeof SuggestLocationsInputSchema>;
 
 const SuggestLocationsOutputSchema = z.object({
-  suggestions: z.array(z.string()).describe('A list of up to 5 location suggestions.'),
+  suggestions: z.array(z.object({
+    name: z.string(),
+    address: z.string(),
+    eta: z.string(),
+  })).describe('A list of up to 5 location suggestions with name, address, and ETA.'),
 });
 export type SuggestLocationsOutput = z.infer<typeof SuggestLocationsOutputSchema>;
 
@@ -27,40 +32,61 @@ export async function suggestLocations(
   return suggestLocationsFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'suggestLocationsPrompt',
-  input: {schema: SuggestLocationsInputSchema},
-  output: {schema: SuggestLocationsOutputSchema},
-  prompt: `You are a helpful assistant that provides real-world location suggestions for a geofencing reminder app.
-  Based on the user's query, provide a list of up to 5 potential matching business or landmark names and their city.
-  Prioritize well-known places. Do not make up places.
-  For example, if the query is "coffee near sf", you could suggest: "Blue Bottle Coffee, San Francisco", "Ritual Coffee Roasters, San Francisco", "Philz Coffee, San Francisco".
-  If the query is "target", you could suggest: "Target, Mountain View", "Target, Sunnyvale", "Target, Cupertino".
-
-  Query: {{{query}}}
-  `,
-});
-
 const suggestLocationsFlow = ai.defineFlow(
   {
     name: 'suggestLocationsFlow',
     inputSchema: SuggestLocationsInputSchema,
     outputSchema: SuggestLocationsOutputSchema,
+    tools: [findNearbyPlacesTool]
   },
   async input => {
-    // In a real app, you would use a tool here to call a Maps API.
-    // For this prototype, we'll use an LLM to generate plausible suggestions.
-    if (input.query.toLowerCase().trim().startsWith('star')) {
-        return {
-            suggestions: [
-                'Starbucks, 123 Main St, Anytown, USA',
-                'Starlight Coffee, 456 Oak Ave, Anytown, USA',
-                'Starry Night Cafe, 789 Pine Ln, Anytown, USA',
-            ]
-        }
+     const {output} = await ai.generate({
+        prompt: `Based on the user's query, find nearby places.
+        Query: ${input.query}
+        User's current location is mocked as "Mountain View, CA". You MUST provide this to the tool.`,
+        tools: [findNearbyPlacesTool],
+        model: 'googleai/gemini-2.0-flash'
+     });
+
+    if (!output || !output.toolRequests) {
+        return { suggestions: [] };
     }
 
-    const {output} = await prompt(input);
-    return output!;
+    const toolResponses = await Promise.all(
+        output.toolRequests.map(async (toolRequest) => {
+            const result = await toolRequest.executor(toolRequest.input);
+            return {
+                id: toolRequest.id,
+                role: 'tool',
+                content: [{ json: result }],
+            };
+        })
+    );
+
+    const finalResponse = await ai.generate({
+      history: [
+        {role: 'user', content: [{text: `Based on the user's query, find nearby places. Query: ${input.query}`}]},
+        {role: 'model', content: output.toolRequests.map(tr => ({toolRequest: {id: tr.id, input: tr.input, name: tr.name}}))},
+        {role: 'tool', content: toolResponses.flatMap(r => r.content)}
+      ],
+      prompt: "Present the location suggestions to the user as a list of suggestions, including the name, address, and ETA for each."
+    });
+
+    try {
+        const suggestions = JSON.parse(finalResponse.text).suggestions;
+        return { suggestions };
+    } catch(e) {
+        // The LLM may not return perfect JSON, so we will try to parse it, but fall back to a simple list.
+        // In a real app, you would want to use a schema for the output.
+        const suggestions = finalResponse.text.split('\n').map(s => {
+            const parts = s.split(',');
+            return {
+                name: parts[0] || '',
+                address: parts[1] || '',
+                eta: parts[2] || '',
+            }
+        });
+        return { suggestions: suggestions.slice(0, 5).filter(s => s.name) };
+    }
   }
 );
