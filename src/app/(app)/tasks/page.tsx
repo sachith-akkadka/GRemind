@@ -79,17 +79,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { useDebounce } from 'use-debounce';
 
 function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void }) {
@@ -142,7 +131,6 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   };
 
   return (
-    <AlertDialog>
     <Card>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
@@ -210,7 +198,6 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
         </CardFooter>
       )}
     </Card>
-    </AlertDialog>
   );
 }
 
@@ -729,7 +716,7 @@ export default function TasksPage() {
     )
     .filter(task => filterCategories.includes(task.category));
 
-  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending');
+  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'today' || task.status === 'missed');
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
   
   const actionableTasksWithLocationCount = tasks.filter(t => (t.status === 'pending' || t.status === 'today') && t.store).length;
