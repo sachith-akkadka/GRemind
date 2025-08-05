@@ -26,6 +26,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogClose
 } from "@/components/ui/dialog"
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +40,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +51,8 @@ export default function LoginPage() {
       router.push('/tasks');
     } catch (error: any) {
        let description = 'An unexpected error occurred. Please try again.';
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         description = 'Invalid credentials. Please check your email and password, or sign up if you don\'t have an account.';
-      } else if (error.code === 'auth/invalid-credential') {
-        description = 'Invalid credentials. Please double-check your email and password.';
       }
       toast({
         title: 'Login Failed',
@@ -69,7 +69,6 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithRedirect(auth, provider);
-       // The user will be redirected, so the toast and router push will happen on the auth-context side
     } catch (error: any) {
       toast({
         title: 'Google Sign-In Failed',
@@ -85,14 +84,26 @@ export default function LoginPage() {
         toast({ title: "Email required", description: "Please enter your email address.", variant: "destructive" });
         return;
     }
-    setIsLoading(true);
+    setIsResetLoading(true);
     try {
         await sendPasswordResetEmail(auth, resetEmail);
-        toast({ title: "Password Reset Email Sent", description: "Check your inbox for a link to reset your password." });
+        toast({ 
+          title: "Check Your Email", 
+          description: `If an account exists for ${resetEmail}, you will receive a password reset link. Please check your spam folder if you don't see it.` 
+        });
+        // We close the dialog by finding its close button and clicking it programmatically
+        document.getElementById('close-reset-dialog')?.click();
     } catch (error: any) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        // Firebase hides specific "user not found" errors for security.
+        // So we show a generic message.
+        toast({ 
+          title: "Check Your Email", 
+          description: `If an account exists for ${resetEmail}, you will receive a password reset link. Please check your spam folder if you don't see it.`
+        });
+        document.getElementById('close-reset-dialog')?.click();
     } finally {
-        setIsLoading(false);
+        setIsResetLoading(false);
+        setResetEmail('');
     }
   }
 
@@ -129,7 +140,7 @@ export default function LoginPage() {
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
-                  <Dialog>
+                  <Dialog onOpenChange={(open) => !open && setResetEmail('')}>
                     <DialogTrigger asChild>
                        <Button variant="link" className="ml-auto inline-block p-0 h-auto text-sm underline">
                         Forgot your password?
@@ -158,8 +169,11 @@ export default function LoginPage() {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button type="submit" onClick={handlePasswordReset} disabled={isLoading}>
-                                {isLoading ? 'Sending...' : 'Send Reset Link'}
+                            <DialogClose asChild>
+                               <Button type="button" variant="outline" id="close-reset-dialog">Cancel</Button>
+                            </DialogClose>
+                            <Button type="submit" onClick={handlePasswordReset} disabled={isResetLoading}>
+                                {isResetLoading ? 'Sending...' : 'Send Reset Link'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
