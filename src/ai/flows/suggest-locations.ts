@@ -45,18 +45,11 @@ const suggestLocationsFlow = ai.defineFlow(
       return { suggestions: [] };
     }
     
-    const { output } = await ai.generate({
-        prompt: `Based on the user's query "${input.query}", find nearby places. The user's current location is mocked as "Mountain View, CA". You MUST provide this to the tool.`,
-        tools: [findNearbyPlacesTool],
-        model: 'googleai/gemini-2.0-flash'
-     });
+    // The user's current location is mocked for this prototype.
+    // In a real app, this would come from the device's GPS.
+    const userLocation = "Mountain View, CA";
 
-    if (!output || !output.toolRequests || output.toolRequests.length === 0) {
-        return { suggestions: [] };
-    }
-
-    const toolRequest = output.toolRequests[0];
-    const toolResult = await toolRequest.executor(toolRequest.input);
+    const toolResult = await findNearbyPlacesTool({ query: input.query, userLocation: userLocation });
 
     if (toolResult.places && toolResult.places.length > 0) {
       return { suggestions: toolResult.places };

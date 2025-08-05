@@ -253,9 +253,11 @@ function NewTaskSheet({
   const [location, setLocation] = React.useState('');
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
   const [isSuggestingLocations, setIsSuggestingLocations] = React.useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = React.useState(true);
 
   const [taskSuggestions, setTaskSuggestions] = React.useState<SuggestTasksOutput['suggestions']>([]);
   const [isSuggestingTasks, setIsSuggestingTasks] = React.useState(false);
+  const [showTaskSuggestions, setShowTaskSuggestions] = React.useState(true);
 
   const [debouncedTitle] = useDebounce(title, 300);
   const [debouncedLocation] = useDebounce(location, 300);
@@ -287,11 +289,13 @@ function NewTaskSheet({
       }
       setLocationSuggestions([]);
       setTaskSuggestions([]);
+      setShowTaskSuggestions(true);
+      setShowLocationSuggestions(true);
     }
   }, [open, editingTask]);
 
   const fetchTaskSuggestions = React.useCallback(async (query: string) => {
-    if (query.length < 3) {
+    if (query.length < 3 || !showTaskSuggestions) {
       setTaskSuggestions([]);
       return;
     }
@@ -305,14 +309,14 @@ function NewTaskSheet({
     } finally {
       setIsSuggestingTasks(false);
     }
-  }, []);
+  }, [showTaskSuggestions]);
 
   React.useEffect(() => {
-    if(debouncedTitle) fetchTaskSuggestions(debouncedTitle);
+    fetchTaskSuggestions(debouncedTitle);
   }, [debouncedTitle, fetchTaskSuggestions]);
   
   const fetchLocationSuggestions = React.useCallback(async (query: string) => {
-    if (query.length < 3) {
+    if (query.length < 3 || !showLocationSuggestions) {
       setLocationSuggestions([]);
       return;
     }
@@ -326,10 +330,10 @@ function NewTaskSheet({
     } finally {
       setIsSuggestingLocations(false);
     }
-  }, []);
+  }, [showLocationSuggestions]);
 
   React.useEffect(() => {
-    if (debouncedLocation) fetchLocationSuggestions(debouncedLocation);
+    fetchLocationSuggestions(debouncedLocation);
   }, [debouncedLocation, fetchLocationSuggestions]);
 
 
@@ -394,12 +398,15 @@ function NewTaskSheet({
                   id="title"
                   placeholder="e.g., Buy groceries"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setShowTaskSuggestions(true);
+                  }}
                   autoComplete="off"
                 />
                 {isSuggestingTasks && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
               </div>
-            {taskSuggestions.length > 0 && (
+            {taskSuggestions.length > 0 && showTaskSuggestions && (
               <div className="absolute z-20 w-full bg-card border rounded-md shadow-lg mt-1 top-full">
                 {taskSuggestions.map((s, i) => (
                   <button
@@ -407,7 +414,7 @@ function NewTaskSheet({
                     type="button"
                     onClick={() => {
                         setTitle(s);
-                        setTaskSuggestions([]);
+                        setShowTaskSuggestions(false);
                     }}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-muted"
                   >
@@ -503,12 +510,15 @@ function NewTaskSheet({
                 placeholder="e.g., Downtown Mall"
                 className="pl-8"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  setShowLocationSuggestions(true);
+                }}
                 autoComplete="off"
               />
               {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
             </div>
-              {locationSuggestions.length > 0 && (
+              {locationSuggestions.length > 0 && showLocationSuggestions && (
                 <div className="absolute z-10 w-full bg-card border rounded-md shadow-lg mt-1 top-full max-h-48 overflow-y-auto">
                   {locationSuggestions.map((suggestion, index) => (
                     <div
@@ -518,7 +528,7 @@ function NewTaskSheet({
                         setLocation(
                           `${suggestion.name}, ${suggestion.address}`
                         );
-                        setLocationSuggestions([]);
+                        setShowLocationSuggestions(false);
                       }}
                     >
                       <p className="font-semibold">{suggestion.name}</p>
