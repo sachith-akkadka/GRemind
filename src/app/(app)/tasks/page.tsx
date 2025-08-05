@@ -234,6 +234,8 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
   const [isSuggestingTitle, setIsSuggestingTitle] = React.useState(false);
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
+  const [debouncedLocation, setDebouncedLocation] = React.useState(location);
+
 
   React.useEffect(() => {
     if (open) { 
@@ -263,6 +265,43 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
     }
   }, [open, editingTask]);
 
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedLocation(location);
+    }, 500); // 500ms debounce delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [location]);
+
+  React.useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (debouncedLocation.length > 2) {
+        setIsSuggestingLocation(true);
+        try {
+          const result = await suggestLocations({ query: debouncedLocation });
+          setLocationSuggestions(result.suggestions);
+        } catch (error) {
+          console.error("Location suggestion failed", error);
+          setLocationSuggestions([]);
+          if (error instanceof Error && error.message.includes('429')) {
+             toast({
+                title: 'Rate Limit Exceeded',
+                description: 'You are making too many requests. Please wait a moment and try again.',
+                variant: 'destructive',
+            });
+          }
+        } finally {
+          setIsSuggestingLocation(false);
+        }
+      } else {
+        setLocationSuggestions([]);
+      }
+    };
+    fetchSuggestions();
+  }, [debouncedLocation, toast]);
+
 
   const handleSuggestTitle = async () => {
     setIsSuggestingTitle(true);
@@ -286,23 +325,8 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
     }
   };
   
-  const handleLocationChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setLocation(query);
-    if (query.length > 2) {
-      setIsSuggestingLocation(true);
-      try {
-        const result = await suggestLocations({ query });
-        setLocationSuggestions(result.suggestions);
-      } catch (error) {
-        console.error("Location suggestion failed", error);
-        setLocationSuggestions([]);
-      } finally {
-        setIsSuggestingLocation(false);
-      }
-    } else {
-      setLocationSuggestions([]);
-    }
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocation(e.target.value);
   };
   
   const handleSubmit = () => {
