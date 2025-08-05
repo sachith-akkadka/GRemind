@@ -495,25 +495,25 @@ export default function TasksPage() {
       const batch = writeBatch(db);
       const today = startOfDay(new Date());
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as FirestoreTask;
+      querySnapshot.forEach((taskDoc) => {
+        const data = taskDoc.data() as FirestoreTask;
         if (data.status !== 'completed') {
             const taskDueDate = (data.dueDate as Timestamp).toDate();
             let currentStatus = data.status;
 
             if (currentStatus === 'pending' && isToday(taskDueDate)) {
                 currentStatus = 'today';
-                const taskRef = doc(db, 'tasks', doc.id);
+                const taskRef = doc(db, 'tasks', taskDoc.id);
                 batch.update(taskRef, { status: 'today' });
             } else if (currentStatus === 'today' && !isToday(taskDueDate) && taskDueDate < today) {
                 currentStatus = 'missed';
-                 const taskRef = doc(db, 'tasks', doc.id);
+                const taskRef = doc(db, 'tasks', taskDoc.id);
                 batch.update(taskRef, { status: 'missed' });
             }
 
 
             tasksData.push({
-                id: doc.id,
+                id: taskDoc.id,
                 ...data,
                 status: currentStatus,
                 dueDate: taskDueDate.toISOString(),
