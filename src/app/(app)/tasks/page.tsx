@@ -28,6 +28,7 @@ import {
   Navigation,
   CheckCircle,
   Clock,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -68,9 +69,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isToday, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { suggestTaskTitle } from '@/ai/flows/suggest-task-title';
+import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
 import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
-import { suggestTaskLocation } from '@/ai/flows/suggest-task-location';
 import {
   Select,
   SelectContent,
@@ -89,6 +89,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useDebounce } from 'use-debounce';
 
 function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void }) {
   const statusVariant = {
@@ -108,28 +109,11 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   };
   
   const handleStartNavigation = async () => {
-    let destination = task.store;
-    if (!destination) {
-      try {
-        toast({ title: "Finding a location..." });
-        const result = await suggestTaskLocation({ taskTitle: task.title });
-        if (result.suggestedLocation) {
-          destination = result.suggestedLocation;
-           onUpdateTask(task.id, { store: destination });
-          toast({
-            title: "No location set!",
-            description: `We've suggested a destination for you: ${destination}. Starting navigation.`,
-          });
-        } else {
-           toast({ title: "Navigation Failed", description: "Could not suggest a location for this task.", variant: "destructive" });
-           return;
-        }
-      } catch (error) {
-        toast({ title: "Navigation Failed", description: "Could not suggest a location for this task.", variant: "destructive" });
+    if (!task.store) {
+        toast({ title: "No Location", description: "This task doesn't have a location set.", variant: "destructive" });
         return;
-      }
     }
-    const query = encodeURIComponent(destination);
+    const query = encodeURIComponent(task.store);
     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
   };
 
@@ -202,7 +186,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will mark the task as completed and move it to your history.
+            This action cannot be undone. This will permanently delete the task.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -236,19 +220,22 @@ function NewTaskSheet({
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
-
+  
   const [hour, setHour] = React.useState('09');
   const [minute, setMinute] = React.useState('00');
   const [ampm, setAmpm] = React.useState('AM');
 
   const [location, setLocation] = React.useState('');
-  const [locationSuggestions, setLocationSuggestions] = React.useState<
-    SuggestLocationsOutput['suggestions']
-  >([]);
-  const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
-  const [debouncedTitle, setDebouncedTitle] = React.useState(title);
+  const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
+  const [isSuggestingLocations, setIsSuggestingLocations] = React.useState(false);
 
-  // Set initial state when editing or creating a new task
+  const [taskSuggestions, setTaskSuggestions] = React.useState<SuggestTasksOutput['suggestions']>([]);
+  const [isSuggestingTasks, setIsSuggestingTasks] = React.useState(false);
+
+  const [debouncedTitle] = useDebounce(title, 300);
+  const [debouncedLocation] = useDebounce(location, 300);
+
+
   React.useEffect(() => {
     if (open) {
       if (editingTask) {
@@ -274,81 +261,52 @@ function NewTaskSheet({
         setLocation('');
       }
       setLocationSuggestions([]);
+      setTaskSuggestions([]);
     }
   }, [open, editingTask]);
 
-  // Debounce the title input
+  const fetchTaskSuggestions = React.useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setTaskSuggestions([]);
+      return;
+    }
+    setIsSuggestingTasks(true);
+    try {
+      const result = await suggestTasks({ query });
+      setTaskSuggestions(result.suggestions);
+    } catch (error) {
+      console.error("Failed to fetch task suggestions:", error);
+      setTaskSuggestions([]);
+    } finally {
+      setIsSuggestingTasks(false);
+    }
+  }, []);
+
   React.useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedTitle(title);
-    }, 500);
+    fetchTaskSuggestions(debouncedTitle);
+  }, [debouncedTitle, fetchTaskSuggestions]);
+  
+  const fetchLocationSuggestions = React.useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+    setIsSuggestingLocations(true);
+    try {
+      const result = await suggestLocations({ query });
+      setLocationSuggestions(result.suggestions);
+    } catch (error) {
+      console.error("Failed to fetch location suggestions:", error);
+      setLocationSuggestions([]);
+    } finally {
+      setIsSuggestingLocations(false);
+    }
+  }, []);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [title]);
-
-  // AI Suggestions Effect
   React.useEffect(() => {
-    if (!debouncedTitle || !open) return;
+    fetchLocationSuggestions(debouncedLocation);
+  }, [debouncedLocation, fetchLocationSuggestions]);
 
-    const fetchSuggestions = async () => {
-      // Title suggestion logic
-      if (debouncedTitle.split(' ').length > 1) {
-        try {
-          const result = await suggestTaskTitle({});
-          if (result.suggestedTitle && result.suggestedTitle !== title) {
-            setTitle(result.suggestedTitle);
-            toast({
-              title: "We've completed your thought!",
-              description: `Task title set to: "${result.suggestedTitle}"`,
-            });
-          }
-        } catch (error) {
-          console.error('Title suggestion failed:', error);
-        }
-      }
-
-      // Location suggestion logic
-      if (debouncedTitle.length > 3 && !location) {
-        setIsSuggestingLocation(true);
-        try {
-          const result = await suggestLocations({ query: debouncedTitle });
-          setLocationSuggestions(result.suggestions);
-          if (result.suggestions.length > 0) {
-            const bestSuggestion = result.suggestions[0];
-            setLocation(`${bestSuggestion.name}, ${bestSuggestion.address}`);
-            toast({
-              title: 'Location Suggested',
-              description: `We've set the location to ${bestSuggestion.name} based on your task title.`,
-            });
-          }
-        } catch (error) {
-          console.error('Location suggestion failed', error);
-          setLocationSuggestions([]);
-          if (error instanceof Error && error.message.includes('429')) {
-             toast({
-                title: 'Rate Limit Exceeded',
-                description: 'You are making too many requests. Please wait a moment and try again.',
-                variant: 'destructive',
-            });
-          }
-        } finally {
-          setIsSuggestingLocation(false);
-        }
-      } else {
-        setLocationSuggestions([]);
-      }
-    };
-
-    fetchSuggestions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedTitle, open]);
-
-
-  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocation(e.target.value);
-  };
 
   const handleSubmit = () => {
     if (!title || !dueDate) {
@@ -404,16 +362,35 @@ function NewTaskSheet({
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
+          <div className="grid gap-2 relative">
             <Label htmlFor="title">Task Title</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="title"
-                placeholder="e.g., Buy groceries"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
+              <div className="relative">
+                <Input
+                  id="title"
+                  placeholder="e.g., Buy groceries"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  autoComplete="off"
+                />
+                {isSuggestingTasks && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+              </div>
+            {taskSuggestions.length > 0 && (
+              <div className="absolute z-20 w-full bg-card border rounded-md shadow-lg mt-1 top-full">
+                {taskSuggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                        setTitle(s);
+                        setTaskSuggestions([]);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="description">Description (Optional)</Label>
@@ -492,7 +469,7 @@ function NewTaskSheet({
               </div>
             </div>
           </div>
-          <div className="grid gap-2">
+          <div className="grid gap-2 relative">
             <Label htmlFor="location">Location (Optional)</Label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -501,15 +478,13 @@ function NewTaskSheet({
                 placeholder="e.g., Downtown Mall"
                 className="pl-8"
                 value={location}
-                onChange={handleLocationChange}
+                onChange={(e) => setLocation(e.target.value)}
+                autoComplete="off"
               />
-              {isSuggestingLocation && (
-                <div className="p-2 text-sm text-center text-muted-foreground">
-                  Finding nearby places...
-                </div>
-              )}
+              {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+            </div>
               {locationSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full bg-card border rounded-md mt-1 shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-10 w-full bg-card border rounded-md shadow-lg mt-1 top-full max-h-48 overflow-y-auto">
                   {locationSuggestions.map((suggestion, index) => (
                     <div
                       key={index}
@@ -532,7 +507,6 @@ function NewTaskSheet({
                   ))}
                 </div>
               )}
-            </div>
           </div>
         </div>
         <SheetFooter>
@@ -640,10 +614,10 @@ export default function TasksPage() {
   
   const handleDeleteTask = async (id: string) => {
     const taskRef = doc(db, 'tasks', id);
-    await updateDoc(taskRef, { status: 'completed', completedAt: Timestamp.now() });
+    await deleteDoc(taskRef);
     toast({
         title: "Task Deleted",
-        description: "The task has been moved to your history.",
+        description: "The task has been permanently deleted.",
     });
   };
 

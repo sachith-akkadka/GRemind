@@ -1,21 +1,24 @@
 'use server';
 
 /**
- * @fileOverview A Genkit flow that suggests locations based on a user's query.
+ * @fileOverview Implements a flow to suggest locations based on user input and current location.
  *
- * - suggestLocations - A function that returns a list of location suggestions.
- * - SuggestLocationsInput - The input type for the suggestLocations function.
- * - SuggestLocationsOutput - The return type for the suggestLocations function.
+ * - suggestLocations - A function that suggests locations.
+ * - SuggestLocationsInput - The input type for the function.
+ * - SuggestLocationsOutput - The return type for the function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { findNearbyPlacesTool } from '../tools/location-tools';
 
+
 const SuggestLocationsInputSchema = z.object({
-  query: z.string().describe('The user\'s search query for a location.'),
+  query: z.string().describe("The user's partial location input."),
 });
+
 export type SuggestLocationsInput = z.infer<typeof SuggestLocationsInputSchema>;
+
 
 const SuggestLocationsOutputSchema = z.object({
   suggestions: z.array(z.object({
@@ -26,9 +29,8 @@ const SuggestLocationsOutputSchema = z.object({
 });
 export type SuggestLocationsOutput = z.infer<typeof SuggestLocationsOutputSchema>;
 
-export async function suggestLocations(
-  input: SuggestLocationsInput
-): Promise<SuggestLocationsOutput> {
+
+export async function suggestLocations(input: SuggestLocationsInput): Promise<SuggestLocationsOutput> {
   return suggestLocationsFlow(input);
 }
 
@@ -37,56 +39,29 @@ const suggestLocationsFlow = ai.defineFlow(
     name: 'suggestLocationsFlow',
     inputSchema: SuggestLocationsInputSchema,
     outputSchema: SuggestLocationsOutputSchema,
-    tools: [findNearbyPlacesTool]
   },
-  async input => {
-     const {output} = await ai.generate({
-        prompt: `Based on the user's query, find nearby places.
-        Query: ${input.query}
-        User's current location is mocked as "Mountain View, CA". You MUST provide this to the tool.`,
+  async (input) => {
+    if (!input.query.trim()) {
+      return { suggestions: [] };
+    }
+    
+    const { output } = await ai.generate({
+        prompt: `Based on the user's query "${input.query}", find nearby places. The user's current location is mocked as "Mountain View, CA". You MUST provide this to the tool.`,
         tools: [findNearbyPlacesTool],
         model: 'googleai/gemini-2.0-flash'
      });
 
-    if (!output || !output.toolRequests) {
+    if (!output || !output.toolRequests || output.toolRequests.length === 0) {
         return { suggestions: [] };
     }
 
-    const toolResponses = await Promise.all(
-        output.toolRequests.map(async (toolRequest) => {
-            const result = await toolRequest.executor(toolRequest.input);
-            return {
-                id: toolRequest.id,
-                role: 'tool',
-                content: [{ json: result }],
-            };
-        })
-    );
+    const toolRequest = output.toolRequests[0];
+    const toolResult = await toolRequest.executor(toolRequest.input);
 
-    const finalResponse = await ai.generate({
-      history: [
-        {role: 'user', content: [{text: `Based on the user's query, find nearby places. Query: ${input.query}`}]},
-        {role: 'model', content: output.toolRequests.map(tr => ({toolRequest: {id: tr.id, input: tr.input, name: tr.name}}))},
-        {role: 'tool', content: toolResponses.flatMap(r => r.content)}
-      ],
-      prompt: "Present the location suggestions to the user as a list of suggestions, including the name, address, and ETA for each."
-    });
-
-    try {
-        const suggestions = JSON.parse(finalResponse.text).suggestions;
-        return { suggestions };
-    } catch(e) {
-        // The LLM may not return perfect JSON, so we will try to parse it, but fall back to a simple list.
-        // In a real app, you would want to use a schema for the output.
-        const suggestions = finalResponse.text.split('\n').map(s => {
-            const parts = s.split(',');
-            return {
-                name: parts[0] || '',
-                address: parts[1] || '',
-                eta: parts[2] || '',
-            }
-        });
-        return { suggestions: suggestions.slice(0, 5).filter(s => s.name) };
+    if (toolResult.places && toolResult.places.length > 0) {
+      return { suggestions: toolResult.places };
     }
+    
+    return { suggestions: [] };
   }
 );
