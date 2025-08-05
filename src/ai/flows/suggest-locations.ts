@@ -15,6 +15,7 @@ import { findNearbyPlacesTool } from '../tools/location-tools';
 
 const SuggestLocationsInputSchema = z.object({
   query: z.string().describe("The user's partial location input."),
+  userLocation: z.string().describe("The user's current location as a string, e.g., 'Mountain View, CA' or a latitude,longitude pair."),
 });
 
 export type SuggestLocationsInput = z.infer<typeof SuggestLocationsInputSchema>;
@@ -44,12 +45,8 @@ const suggestLocationsFlow = ai.defineFlow(
     if (!input.query.trim()) {
       return { suggestions: [] };
     }
-    
-    // The user's current location is mocked for this prototype.
-    // In a real app, this would come from the device's GPS.
-    const userLocation = "Mountain View, CA";
 
-    const toolResult = await findNearbyPlacesTool({ query: input.query, userLocation: userLocation });
+    const toolResult = await findNearbyPlacesTool({ query: input.query, userLocation: input.userLocation });
 
     if (toolResult.places && toolResult.places.length > 0) {
       return { suggestions: toolResult.places };

@@ -201,7 +201,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
       </CardContent>
       {task.status !== 'completed' && (
         <CardFooter className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
+          <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating || !task.store}>
              {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
              {isNavigating ? 'Finding...' : 'Start Navigation'}
           </Button>
@@ -233,6 +233,7 @@ function NewTaskSheet({
   onOpenChange,
   onTaskSubmit,
   editingTask,
+  userLocation,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -240,6 +241,7 @@ function NewTaskSheet({
     task: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string }
   ) => void;
   editingTask: Task | null;
+  userLocation: string | null;
 }) {
   const { toast } = useToast();
   const [title, setTitle] = React.useState('');
@@ -316,13 +318,13 @@ function NewTaskSheet({
   }, [debouncedTitle, fetchTaskSuggestions]);
   
   const fetchLocationSuggestions = React.useCallback(async (query: string) => {
-    if (query.length < 3 || !showLocationSuggestions) {
+    if (query.length < 3 || !showLocationSuggestions || !userLocation) {
       setLocationSuggestions([]);
       return;
     }
     setIsSuggestingLocations(true);
     try {
-      const result = await suggestLocations({ query });
+      const result = await suggestLocations({ query, userLocation });
       setLocationSuggestions(result.suggestions);
     } catch (error) {
       console.error("Failed to fetch location suggestions:", error);
@@ -330,7 +332,7 @@ function NewTaskSheet({
     } finally {
       setIsSuggestingLocations(false);
     }
-  }, [showLocationSuggestions]);
+  }, [showLocationSuggestions, userLocation]);
 
   React.useEffect(() => {
     fetchLocationSuggestions(debouncedLocation);
@@ -400,7 +402,7 @@ function NewTaskSheet({
                   value={title}
                   onChange={(e) => {
                     setTitle(e.target.value);
-                    setShowTaskSuggestions(true);
+                    if (!showTaskSuggestions) setShowTaskSuggestions(true);
                   }}
                   autoComplete="off"
                 />
@@ -512,7 +514,7 @@ function NewTaskSheet({
                 value={location}
                 onChange={(e) => {
                   setLocation(e.target.value);
-                  setShowLocationSuggestions(true);
+                  if (!showLocationSuggestions) setShowLocationSuggestions(true);
                 }}
                 autoComplete="off"
               />
@@ -568,6 +570,30 @@ export default function TasksPage() {
   );
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
+  const [userLocation, setUserLocation] = React.useState<string | null>(null);
+
+
+  React.useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation(`${latitude},${longitude}`);
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+           toast({
+            title: "Could not get location",
+            description: "Location suggestions may not be accurate. Please ensure location services are enabled.",
+            variant: "destructive"
+           })
+           // Fallback to a default location if GPS fails
+           setUserLocation("Mountain View, CA");
+        }
+      );
+    }
+  }, [toast]);
+
 
   React.useEffect(() => {
     if (!user) {
@@ -631,29 +657,46 @@ export default function TasksPage() {
     
     const { id, ...data } = taskData;
     
-    if (id) { // Editing
-        const taskRef = doc(db, 'tasks', id);
-        await updateDoc(taskRef, data);
-    } else { // Adding
-        await addDoc(collection(db, 'tasks'), {
-            ...data,
-            userId: user.uid,
-        });
+    try {
+        if (id) { // Editing
+            const taskRef = doc(db, 'tasks', id);
+            await updateDoc(taskRef, data);
+            toast({ title: "Task Updated", description: `"${data.title}" has been updated.` });
+        } else { // Adding
+            await addDoc(collection(db, 'tasks'), {
+                ...data,
+                userId: user.uid,
+            });
+            toast({ title: "Task Created", description: `"${data.title}" has been added to your list.` });
+        }
+    } catch (error) {
+        console.error("Error submitting task:", error);
+        toast({ title: "Submission Error", description: "Could not save the task.", variant: "destructive" });
     }
   };
   
   const handleUpdateTask = async (id: string, updatedTask: Partial<FirestoreTask>) => {
-     const taskRef = doc(db, 'tasks', id);
-     await updateDoc(taskRef, updatedTask);
+     try {
+        const taskRef = doc(db, 'tasks', id);
+        await updateDoc(taskRef, updatedTask);
+     } catch (error) {
+        console.error("Error updating task:", error);
+        toast({ title: "Update Error", description: "Could not update the task.", variant: "destructive" });
+     }
   };
   
   const handleDeleteTask = async (id: string) => {
-    const taskRef = doc(db, 'tasks', id);
-    await deleteDoc(taskRef);
-    toast({
-        title: "Task Deleted",
-        description: "The task has been permanently deleted.",
-    });
+    try {
+        const taskRef = doc(db, 'tasks', id);
+        await deleteDoc(taskRef);
+        toast({
+            title: "Task Deleted",
+            description: "The task has been permanently deleted.",
+        });
+    } catch (error) {
+        console.error("Error deleting task:", error);
+        toast({ title: "Delete Error", description: "Could not delete the task.", variant: "destructive" });
+    }
   };
 
   const onFilterChange = (category: string, checked: boolean) => {
@@ -667,7 +710,7 @@ export default function TasksPage() {
     if (pendingTasksWithLocations.length > 1) {
       const waypoints = pendingTasksWithLocations.slice(0, -1).map(task => encodeURIComponent(task.store!)).join('|');
       const destination = encodeURIComponent(pendingTasksWithLocations[pendingTasksWithLocations.length - 1].store!);
-      const origin = "My Location"; // Or get user's current location
+      const origin = userLocation || "My Location"; // Or get user's current location
       window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}`, '_blank');
     }
   };
@@ -771,6 +814,7 @@ export default function TasksPage() {
         onOpenChange={setIsSheetOpen}
         onTaskSubmit={handleTaskSubmit}
         editingTask={editingTask}
+        userLocation={userLocation}
       />
     </AlertDialog>
   );
