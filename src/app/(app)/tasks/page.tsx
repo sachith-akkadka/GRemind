@@ -67,7 +67,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTaskTitle } from '@/ai/flows/suggest-task-title';
 import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
@@ -350,13 +350,15 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
     const combinedDueDate = new Date(dueDate);
     combinedDueDate.setHours(hours, parseInt(minute, 10), 0, 0);
 
+    const newStatus = isToday(combinedDueDate) ? 'today' : 'pending';
+
     onTaskSubmit({
         id: editingTask?.id,
         title,
         description,
         dueDate: Timestamp.fromDate(combinedDueDate),
         store: location,
-        status: editingTask?.status || 'pending',
+        status: editingTask ? (isToday(combinedDueDate) ? 'today' : editingTask.status) : newStatus,
         category: editingTask?.category || 'Personal',
     });
     
@@ -490,18 +492,38 @@ export default function TasksPage() {
     const q = query(collection(db, 'tasks'), where('userId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const tasksData: Task[] = [];
+      const batch = writeBatch(db);
+      const today = startOfDay(new Date());
+
       querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filter out completed tasks from the main view
+        const data = doc.data() as FirestoreTask;
         if (data.status !== 'completed') {
+            const taskDueDate = (data.dueDate as Timestamp).toDate();
+            let currentStatus = data.status;
+
+            if (currentStatus === 'pending' && isToday(taskDueDate)) {
+                currentStatus = 'today';
+                const taskRef = doc(db, 'tasks', doc.id);
+                batch.update(taskRef, { status: 'today' });
+            } else if (currentStatus === 'today' && !isToday(taskDueDate) && taskDueDate < today) {
+                currentStatus = 'missed';
+                 const taskRef = doc(db, 'tasks', doc.id);
+                batch.update(taskRef, { status: 'missed' });
+            }
+
+
             tasksData.push({
                 id: doc.id,
                 ...data,
-                dueDate: (data.dueDate as Timestamp).toDate().toISOString(),
+                status: currentStatus,
+                dueDate: taskDueDate.toISOString(),
                 completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
             } as Task);
         }
       });
+      
+      batch.commit().catch(err => console.error("Error updating task statuses:", err));
+
       setTasks(tasksData);
     });
 
