@@ -1,7 +1,20 @@
-
 'use client';
 
 import * as React from 'react';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  Timestamp,
+  writeBatch,
+} from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { useAuth } from '@/contexts/auth-context';
 import {
   ListFilter,
   PlusCircle,
@@ -46,15 +59,15 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { Task } from '@/lib/types';
-import { tasks as initialTasks, categories } from '@/lib/data';
+import type { Task, FirestoreTask } from '@/lib/types';
+import { categories } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTaskTitle } from '@/ai/flows/suggest-task-title';
 import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
@@ -78,7 +91,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task, onUpdateTask: (task: Task) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void }) {
+function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void }) {
   const statusVariant = {
     pending: 'secondary',
     today: 'default',
@@ -88,7 +101,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   const { toast } = useToast();
 
   const handleMarkAsDone = () => {
-    onUpdateTask({ ...task, status: 'completed', completedAt: new Date().toISOString() });
+    onUpdateTask(task.id, { status: 'completed', completedAt: Timestamp.now() });
      toast({
       title: "Task Completed!",
       description: `"${task.title}" has been moved to completed.`,
@@ -98,12 +111,12 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   const handleStartNavigation = async () => {
     let destination = task.store;
     if (!destination) {
-      // If no location, use AI to suggest one based on the title
       try {
         toast({ title: "Finding a location..." });
         const result = await suggestTaskLocation({ taskTitle: task.title });
         if (result.suggestedLocation) {
           destination = result.suggestedLocation;
+           onUpdateTask(task.id, { store: destination });
           toast({
             title: "No location set!",
             description: `We've suggested a destination for you: ${destination}. Starting navigation.`,
@@ -156,7 +169,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground space-y-1">
-           <p className="flex items-center gap-2"><Clock className="w-4 h-4"/> Due: {format(new Date(task.dueDate), "PPP, p")}</p>
+           <p className="flex items-center gap-2"><Clock className="w-4 h-4"/> Due: {format(parseISO(task.dueDate), "PPP, p")}</p>
            {task.store && <p className="flex items-center gap-2"><MapPin className="w-4 h-4"/> {task.store}</p>}
         </div>
         {task.subtasks && task.subtasks.length > 0 && (
@@ -207,7 +220,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
   );
 }
 
-function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open: boolean, onOpenChange: (open: boolean) => void, onTaskSubmit: (task: Omit<Task, 'id' | 'status' | 'completedAt' | 'category'> & { id?: string }) => void, editingTask: Task | null }) {
+function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open: boolean, onOpenChange: (open: boolean) => void, onTaskSubmit: (task: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string }) => void, editingTask: Task | null }) {
   const { toast } = useToast();
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
@@ -223,11 +236,11 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) { // Only update form when sheet opens
+    if (open) { 
         if (editingTask) {
             setTitle(editingTask.title);
             setDescription(editingTask.description || '');
-            const taskDueDate = new Date(editingTask.dueDate);
+            const taskDueDate = parseISO(editingTask.dueDate);
             setDueDate(taskDueDate);
             const formattedHour = format(taskDueDate, 'hh');
             const formattedMinute = format(taskDueDate, 'mm');
@@ -237,13 +250,12 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
             setAmpm(formattedAmPm.toUpperCase());
             setLocation(editingTask.store || '');
         } else {
-            // Reset form for new task
             setTitle('');
             setDescription('');
             const now = new Date();
             setDueDate(now);
             setHour(format(now, 'hh'));
-            setMinute('00'); // Start at the hour
+            setMinute('00'); 
             setAmpm(format(now, 'aa').toUpperCase());
             setLocation('');
         }
@@ -318,11 +330,13 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
         id: editingTask?.id,
         title,
         description,
-        dueDate: combinedDueDate.toISOString(),
+        dueDate: Timestamp.fromDate(combinedDueDate),
         store: location,
+        status: editingTask?.status || 'pending',
+        category: editingTask?.category || 'Personal',
     });
     
-    onOpenChange(false); // Close the sheet
+    onOpenChange(false);
   };
   
   return (
@@ -433,13 +447,38 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
 }
 
 export default function TasksPage() {
-  const [tasks, setTasks] = React.useState<Task[]>(initialTasks);
+  const { user } = useAuth();
+  const [tasks, setTasks] = React.useState<Task[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filterCategories, setFilterCategories] = React.useState<string[]>(
     categories.map(c => c.name)
   );
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
+
+  React.useEffect(() => {
+    if (!user) {
+      setTasks([]);
+      return;
+    };
+
+    const q = query(collection(db, 'tasks'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const tasksData: Task[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        tasksData.push({
+          id: doc.id,
+          ...data,
+          dueDate: (data.dueDate as Timestamp).toDate().toISOString(),
+          completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
+        } as Task);
+      });
+      setTasks(tasksData);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
@@ -451,34 +490,30 @@ export default function TasksPage() {
     setIsSheetOpen(true);
   };
 
-  const handleTaskSubmit = (taskData: Omit<Task, 'id' | 'status' | 'completedAt' | 'category'> & { id?: string }) => {
-    if (taskData.id) { // Editing existing task
-        setTasks(prevTasks =>
-            prevTasks.map(task =>
-                task.id === taskData.id ? { ...task, ...taskData, category: task.category, status: task.status } : task
-            )
-        );
-    } else { // Adding new task
-        const newTask: Task = {
-            id: `task-${Date.now()}`,
-            status: 'pending',
-            category: 'Personal', // Default category or derive from somewhere
-            ...taskData,
-        };
-        setTasks(prevTasks => [newTask, ...prevTasks]);
+  const handleTaskSubmit = async (taskData: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string }) => {
+    if (!user) return;
+    
+    const { id, ...data } = taskData;
+    
+    if (id) { // Editing
+        const taskRef = doc(db, 'tasks', id);
+        await updateDoc(taskRef, data);
+    } else { // Adding
+        await addDoc(collection(db, 'tasks'), {
+            ...data,
+            userId: user.uid,
+        });
     }
   };
   
-  const handleUpdateTask = (updatedTask: Task) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === updatedTask.id ? updatedTask : task
-      )
-    );
+  const handleUpdateTask = async (id: string, updatedTask: Partial<FirestoreTask>) => {
+     const taskRef = doc(db, 'tasks', id);
+     await updateDoc(taskRef, updatedTask);
   };
   
-  const handleDeleteTask = (id: string) => {
-    setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+  const handleDeleteTask = async (id: string) => {
+    const taskRef = doc(db, 'tasks', id);
+    await deleteDoc(taskRef);
   };
 
   const onFilterChange = (category: string, checked: boolean) => {

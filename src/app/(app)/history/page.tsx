@@ -1,7 +1,16 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  writeBatch,
+  getDocs,
+} from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { useAuth } from '@/contexts/auth-context';
 import {
   Card,
   CardContent,
@@ -19,18 +28,87 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { tasks as initialTasks } from '@/lib/data';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { Task } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function HistoryPage() {
-  const [completedTasks, setCompletedTasks] = useState<Task[]>(
-    initialTasks.filter((task) => task.status === 'completed')
-  );
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleClearHistory = () => {
-    setCompletedTasks([]);
+  useEffect(() => {
+    if (!user) {
+      setCompletedTasks([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const q = query(
+      collection(db, 'tasks'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'completed')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const tasksData: Task[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          tasksData.push({
+            id: doc.id,
+            ...data,
+            dueDate: data.dueDate.toDate().toISOString(),
+            completedAt: data.completedAt?.toDate().toISOString(),
+          } as Task);
+        });
+        setCompletedTasks(tasksData.sort((a,b) => parseISO(b.completedAt!).getTime() - parseISO(a.completedAt!).getTime()));
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching task history:', error);
+        toast({
+          title: 'Error',
+          description: 'Could not fetch task history.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, toast]);
+
+  const handleClearHistory = async () => {
+    if (!user || completedTasks.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      const q = query(
+        collection(db, 'tasks'),
+        where('userId', '==', user.uid),
+        where('status', '==', 'completed')
+      );
+      const snapshot = await getDocs(q);
+      snapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      toast({
+        title: 'History Cleared',
+        description: 'All completed tasks have been deleted.',
+      });
+    } catch (error) {
+       toast({
+        title: 'Error Clearing History',
+        description: 'Could not clear task history.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -49,7 +127,13 @@ export default function HistoryPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {completedTasks.length > 0 ? (
+            {isLoading ? (
+               <TableRow>
+                <TableCell colSpan={3} className="text-center">
+                  Loading history...
+                </TableCell>
+              </TableRow>
+            ) : completedTasks.length > 0 ? (
               completedTasks.map((task) => (
                 <TableRow key={task.id}>
                   <TableCell>
@@ -59,7 +143,9 @@ export default function HistoryPage() {
                     <Badge variant="outline">{task.category}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {task.completedAt ? format(new Date(task.completedAt), 'PPP') : 'N/A'}
+                    {task.completedAt
+                      ? format(parseISO(task.completedAt), 'PPP')
+                      : 'N/A'}
                   </TableCell>
                 </TableRow>
               ))
@@ -74,7 +160,11 @@ export default function HistoryPage() {
         </Table>
       </CardContent>
       <CardFooter className="border-t px-6 py-4">
-        <Button variant="destructive" onClick={handleClearHistory} disabled={completedTasks.length === 0}>
+        <Button
+          variant="destructive"
+          onClick={handleClearHistory}
+          disabled={completedTasks.length === 0 || isLoading}
+        >
           Clear History
         </Button>
       </CardFooter>

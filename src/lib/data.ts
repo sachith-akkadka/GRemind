@@ -1,4 +1,4 @@
-import type { Task, Category } from './types';
+import type { Category } from './types';
 
 export const categories: Category[] = [
   { id: 'cat1', name: 'Groceries' },
@@ -10,4 +10,5 @@ export const categories: Category[] = [
   { id: 'cat7', name: 'Errands' },
 ];
 
-export const tasks: Task[] = [];
+// Tasks are now stored in Firestore, so this is empty.
+export const tasks = [];
