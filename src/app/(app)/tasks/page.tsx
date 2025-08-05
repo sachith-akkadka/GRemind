@@ -593,7 +593,7 @@ export default function TasksPage() {
         className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg"
         onClick={handleNewTaskClick}
       >
-        <PlusCircle className="h-8 w-8" />
+        <PlusCircle className="h-10 w-10" />
         <span className="sr-only">New Task</span>
       </Button>
 
