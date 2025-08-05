@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,16 +57,14 @@ export default function SignupPage() {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      toast({ title: 'Account created successfully!' });
-      router.push('/tasks');
+      await signInWithRedirect(auth, provider);
+      // The user will be redirected, so the toast and router push will happen on the auth-context side
     } catch (error: any) {
       toast({
         title: 'Google Sign-In Failed',
         description: error.message,
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   };
