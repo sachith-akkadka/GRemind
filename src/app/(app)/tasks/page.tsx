@@ -422,7 +422,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
                         </SelectContent>
                     </Select>
                     <Select value={minute} onValueChange={setMinute}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             {['00', '15', '30', '45'].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                         </SelectContent>
