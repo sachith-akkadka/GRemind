@@ -201,7 +201,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
       </CardContent>
       {task.status !== 'completed' && (
         <CardFooter className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating || !task.store}>
+          <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
              {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
              {isNavigating ? 'Finding...' : 'Start Navigation'}
           </Button>
@@ -318,7 +318,7 @@ function NewTaskSheet({
   }, [debouncedTitle, fetchTaskSuggestions]);
   
   const fetchLocationSuggestions = React.useCallback(async (query: string) => {
-    if (query.length < 3 || !showLocationSuggestions || !userLocation) {
+    if (query.length < 2 || !showLocationSuggestions || !userLocation) {
       setLocationSuggestions([]);
       return;
     }
@@ -335,9 +335,24 @@ function NewTaskSheet({
   }, [showLocationSuggestions, userLocation]);
 
   React.useEffect(() => {
-    fetchLocationSuggestions(debouncedLocation);
+    if (debouncedLocation) {
+      fetchLocationSuggestions(debouncedLocation);
+    }
   }, [debouncedLocation, fetchLocationSuggestions]);
 
+  const handleLocationFocus = React.useCallback(async () => {
+    if (title && !location && userLocation) {
+        setIsSuggestingLocations(true);
+        try {
+            const result = await suggestLocations({ query: title, userLocation });
+            setLocationSuggestions(result.suggestions);
+        } catch (error) {
+            console.error("Failed to fetch contextual location suggestions:", error);
+        } finally {
+            setIsSuggestingLocations(false);
+        }
+    }
+  }, [title, location, userLocation]);
 
   const handleSubmit = () => {
     if (!title || !dueDate) {
@@ -516,6 +531,7 @@ function NewTaskSheet({
                   setLocation(e.target.value);
                   if (!showLocationSuggestions) setShowLocationSuggestions(true);
                 }}
+                onFocus={handleLocationFocus}
                 autoComplete="off"
               />
               {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
@@ -574,6 +590,8 @@ export default function TasksPage() {
 
 
   React.useEffect(() => {
+    // We mock the user's location for the prototype.
+    // In a real app, you'd use navigator.geolocation.getCurrentPosition
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -584,13 +602,16 @@ export default function TasksPage() {
           console.error("Error getting user location:", error);
            toast({
             title: "Could not get location",
-            description: "Location suggestions may not be accurate. Please ensure location services are enabled.",
+            description: "Location suggestions may not be accurate. Using a default location.",
             variant: "destructive"
            })
            // Fallback to a default location if GPS fails
            setUserLocation("Mountain View, CA");
         }
       );
+    } else {
+        // Fallback for browsers that don't support geolocation
+        setUserLocation("Mountain View, CA");
     }
   }, [toast]);
 
