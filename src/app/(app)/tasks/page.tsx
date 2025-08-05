@@ -19,7 +19,6 @@ import {
   ListFilter,
   PlusCircle,
   Search,
-  Wand2,
   Calendar as CalendarIcon,
   MapPin,
   ListTodo,
@@ -265,7 +264,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
         setIsTitleSuggestionUsed(false);
     }
   }, [open, editingTask]);
-
+  
   React.useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedTitle(title);
@@ -277,13 +276,15 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
   }, [title]);
 
   React.useEffect(() => {
+    if (!debouncedTitle || !open) return;
+
     const fetchSuggestions = async () => {
       if (debouncedTitle.split(' ').length > 1 && !isTitleSuggestionUsed) {
         try {
           const result = await suggestTaskTitle({});
           if (result.suggestedTitle && result.suggestedTitle !== title) {
             setTitle(result.suggestedTitle);
-            setIsTitleSuggestionUsed(true); // Prevent re-triggering
+            setIsTitleSuggestionUsed(true);
             toast({
               title: "We've completed your thought!",
               description: `Task title set to: "${result.suggestedTitle}"`,
@@ -325,11 +326,8 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
       }
     };
     
-    if (debouncedTitle) {
-      fetchSuggestions();
-    }
-  }, [debouncedTitle, location, toast, isTitleSuggestionUsed, title]);
-
+    fetchSuggestions();
+  }, [debouncedTitle, location, toast, isTitleSuggestionUsed, title, open]);
   
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation(e.target.value);
