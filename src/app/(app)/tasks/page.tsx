@@ -232,10 +232,8 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
 
   const [location, setLocation] = React.useState('');
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
-  const [isSuggestingTitle, setIsSuggestingTitle] = React.useState(false);
   const [isSuggestingLocation, setIsSuggestingLocation] = React.useState(false);
-  const [debouncedLocation, setDebouncedLocation] = React.useState(location);
-
+  const [debouncedTitle, setDebouncedTitle] = React.useState(title);
 
   React.useEffect(() => {
     if (open) { 
@@ -267,26 +265,34 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedLocation(location);
+      setDebouncedTitle(title);
     }, 500); // 500ms debounce delay
 
     return () => {
       clearTimeout(handler);
     };
-  }, [location]);
+  }, [title]);
 
   React.useEffect(() => {
     const fetchSuggestions = async () => {
-      if (debouncedLocation.length > 2) {
+      if (debouncedTitle.length > 3 && !location) {
         setIsSuggestingLocation(true);
         try {
-          const result = await suggestLocations({ query: debouncedLocation });
+          const result = await suggestLocations({ query: debouncedTitle });
           setLocationSuggestions(result.suggestions);
+          if (result.suggestions.length > 0) {
+            const bestSuggestion = result.suggestions[0];
+            setLocation(`${bestSuggestion.name}, ${bestSuggestion.address}`);
+            toast({
+                title: 'Location Suggested',
+                description: `We've set the location to ${bestSuggestion.name} based on your task title.`,
+            });
+          }
         } catch (error) {
           console.error("Location suggestion failed", error);
           setLocationSuggestions([]);
           if (error instanceof Error && error.message.includes('429')) {
-             toast({
+            toast({
                 title: 'Rate Limit Exceeded',
                 description: 'You are making too many requests. Please wait a moment and try again.',
                 variant: 'destructive',
@@ -300,30 +306,8 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
       }
     };
     fetchSuggestions();
-  }, [debouncedLocation, toast]);
+  }, [debouncedTitle, location, toast]);
 
-
-  const handleSuggestTitle = async () => {
-    setIsSuggestingTitle(true);
-    try {
-      const result = await suggestTaskTitle({});
-      if (result.suggestedTitle) {
-        setTitle(result.suggestedTitle);
-        toast({
-          title: 'Title Suggested!',
-          description: `We've suggested a title for you.`,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Suggestion Failed',
-        description: 'We couldn\'t get a suggestion right now. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSuggestingTitle(false);
-    }
-  };
   
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation(e.target.value);
@@ -379,9 +363,6 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
             <Label htmlFor="title">Task Title</Label>
              <div className="flex items-center gap-2">
                 <Input id="title" placeholder="e.g., Buy groceries" value={title} onChange={(e) => setTitle(e.target.value)} />
-                 <Button variant="outline" size="icon" onClick={handleSuggestTitle} disabled={isSuggestingTitle}>
-                    <Wand2 className={cn("h-4 w-4", isSuggestingTitle && "animate-pulse")} />
-                </Button>
             </div>
           </div>
           <div className="grid gap-2">
@@ -413,7 +394,7 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
                 <Label>Time</Label>
                  <div className="flex items-center gap-2">
                     <Select value={hour} onValueChange={setHour}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
                         <SelectContent>
                             {Array.from({ length: 12 }, (_, i) => (
                                 <SelectItem key={i + 1} value={(i + 1).toString().padStart(2, '0')}>{(i + 1).toString().padStart(2, '0')}</SelectItem>
@@ -421,13 +402,13 @@ function NewTaskSheet({ open, onOpenChange, onTaskSubmit, editingTask }: { open:
                         </SelectContent>
                     </Select>
                     <Select value={minute} onValueChange={setMinute}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
                         <SelectContent>
                             {['00', '15', '30', '45'].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                         </SelectContent>
                     </Select>
                      <Select value={ampm} onValueChange={setAmpm}>
-                        <SelectTrigger className="w-1/3"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-1/3"><SelectValue /></SelectValue></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="AM">AM</SelectItem>
                             <SelectItem value="PM">PM</SelectItem>
