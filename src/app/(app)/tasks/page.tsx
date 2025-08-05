@@ -308,7 +308,7 @@ function NewTaskSheet({
   }, []);
 
   React.useEffect(() => {
-    fetchTaskSuggestions(debouncedTitle);
+    if(debouncedTitle) fetchTaskSuggestions(debouncedTitle);
   }, [debouncedTitle, fetchTaskSuggestions]);
   
   const fetchLocationSuggestions = React.useCallback(async (query: string) => {
@@ -329,7 +329,7 @@ function NewTaskSheet({
   }, []);
 
   React.useEffect(() => {
-    fetchLocationSuggestions(debouncedLocation);
+    if (debouncedLocation) fetchLocationSuggestions(debouncedLocation);
   }, [debouncedLocation, fetchLocationSuggestions]);
 
 
