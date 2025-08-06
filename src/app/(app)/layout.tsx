@@ -41,9 +41,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     isCollapsed && 'justify-center px-2'
                 )}
                 >
-                <Link href="/tasks" className="flex items-center gap-2 font-semibold">
-                    <AppLogo className="h-6 w-6 text-primary" />
-                    <span className={cn('', isCollapsed && 'sr-only')}>G-Remind</span>
+                <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
+                    <AppLogo className="h-6 w-6 text-primary flex-shrink-0" />
+                    <span className={cn('transition-all duration-300', isCollapsed && 'opacity-0 w-0')}>G-Remind</span>
                 </Link>
                 </div>
                 <div className="flex-1 overflow-auto py-4">
