@@ -662,13 +662,13 @@ export default function TasksPage() {
       const tasksData: Task[] = [];
       const batch = writeBatch(db);
       const today = startOfDay(new Date());
+      let shouldUpdate = false;
 
       querySnapshot.forEach((taskDoc) => {
         const data = taskDoc.data() as FirestoreTask;
         if (data.status !== 'completed') {
             const taskDueDate = (data.dueDate as Timestamp).toDate();
             let newStatus: Task['status'] = 'pending';
-            let shouldUpdate = false;
 
             if (isToday(taskDueDate)) {
                 newStatus = 'today';
