@@ -41,7 +41,11 @@ const findTaskLocationFlow = ai.defineFlow(
   async (input) => {
     
     const { output } = await ai.generate({
-        prompt: `Based on the user's task "${input.taskTitle}", find the single most relevant nearby place. The user's current location is "${input.userLocation}". You MUST provide this to the tool.`,
+        prompt: `You MUST use the findNearbyPlacesTool to find the single most relevant nearby place for the following user task.
+        - User's Task: "${input.taskTitle}"
+        - User's Current Location: "${input.userLocation}"
+        
+        Use the task title as the query for the tool. Do not make up a location. Call the tool now.`,
         tools: [findNearbyPlacesTool],
         model: 'googleai/gemini-2.0-flash'
      });
