@@ -906,7 +906,7 @@ export default function TasksPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search tasks or locations..." 
-              className="pl-8 bg-card/20 backdrop-blur-sm border-white/10" 
+              className="pl-8 bg-card/20 border-white/10" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -955,5 +955,3 @@ export default function TasksPage() {
     </>
   );
 }
-
-    
