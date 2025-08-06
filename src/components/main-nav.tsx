@@ -18,11 +18,6 @@ const links = [
     icon: ListTodo,
   },
   {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
     name: 'History',
     href: '/history',
     icon: History,
