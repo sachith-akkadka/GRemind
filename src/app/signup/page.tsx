@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -73,8 +74,8 @@ function SignupPageContent() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="relative mx-auto w-full max-w-sm">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20 p-4">
+      <Card className="relative mx-auto w-full max-w-sm bg-card/20 backdrop-blur-sm border border-white/10">
         <div className="absolute top-4 right-4">
             <ThemeToggle />
         </div>
@@ -82,7 +83,7 @@ function SignupPageContent() {
           <div className="flex justify-center mb-4">
             <Link href="/" className="flex items-center gap-2">
               <AppLogo className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold font-headline">G-Remind</span>
+              <span className="text-2xl font-bold font-headline animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">G-Remind</span>
             </Link>
           </div>
           <CardTitle className="text-xl font-headline">Sign Up</CardTitle>
@@ -137,7 +138,7 @@ function SignupPageContent() {
                 <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or sign up with</span>
+                <span className="bg-background/80 backdrop-blur-sm px-2 text-muted-foreground">Or sign up with</span>
             </div>
           </div>
           <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
