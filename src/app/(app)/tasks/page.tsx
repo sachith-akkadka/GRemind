@@ -836,7 +836,7 @@ export default function TasksPage() {
           <TabsList>
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="tomorrow">Tomorrow</TabsTrigger>
-            <TabsTrigger value="pending">All Pending</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
             {actionableTaskCount >= 2 && (
