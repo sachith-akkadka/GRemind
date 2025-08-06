@@ -59,8 +59,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             <div
             className={cn(
                 'flex flex-col sm:gap-4 sm:py-4 transition-all duration-300 ease-in-out',
-                !isMobile && 'sm:pl-64',
-                isCollapsed && !isMobile && 'sm:pl-20'
+                !isMobile && 'sm:pl-60',
+                isCollapsed && !isMobile && 'sm:pl-14'
             )}
             >
             <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card/20 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
