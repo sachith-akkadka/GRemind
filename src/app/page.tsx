@@ -37,7 +37,7 @@ function HomePageContent() {
           className="relative py-20 md:py-32"
         >
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-4xl md:text-6xl font-bold text-foreground">
+            <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Never forget a task at a location again.
             </h2>
             <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-muted-foreground">
@@ -54,7 +54,7 @@ function HomePageContent() {
         <section className="py-20 md:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h3 className="text-3xl font-bold">A smarter way to manage your errands</h3>
+              <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">A smarter way to manage your errands</h3>
               <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
                 From AI-powered suggestions to optimized routing, we've got you covered.
               </p>
@@ -166,7 +166,7 @@ function HomePageContent() {
 
         <section className="py-20 md:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                 <h2 className="text-3xl md:text-4xl font-bold">Ready to take control of your tasks?</h2>
+                 <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Ready to take control of your tasks?</h2>
                 <p className="mt-4 text-lg text-muted-foreground">
                     Sign up for free and start organizing your life, one location at a time.
                 </p>
