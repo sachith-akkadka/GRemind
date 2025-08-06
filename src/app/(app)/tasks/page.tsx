@@ -81,6 +81,7 @@ import {
 } from '@/components/ui/select';
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void, userLocation: string | null }) {
   const statusVariant = {
@@ -415,9 +416,12 @@ function NewTaskSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>
-            {editingTask ? 'Edit Task' : 'Create a New Task'}
-          </SheetTitle>
+          <div className="flex justify-between items-center">
+            <SheetTitle>
+              {editingTask ? 'Edit Task' : 'Create a New Task'}
+            </SheetTitle>
+            <ThemeToggle />
+          </div>
           <SheetDescription>
             {greeting}
           </SheetDescription>
