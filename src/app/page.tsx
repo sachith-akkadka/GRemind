@@ -1,19 +1,25 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin, Navigation, Zap, BrainCircuit } from 'lucide-react';
 import { AppLogo } from '@/components/icons';
 import Image from "next/image";
+import { ThemeProvider } from 'next-themes';
+import { ThemeToggle } from '@/components/theme-toggle';
 
-export default function Home() {
+
+function HomePageContent() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+     <div className="flex flex-col min-h-screen bg-background">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <AppLogo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">G-Remind</h1>
         </div>
         <nav className="flex items-center gap-4">
+          <ThemeToggle />
           <Button variant="ghost" asChild>
             <Link href="/login">Log In</Link>
           </Button>
@@ -110,7 +116,21 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  );
+  )
+}
+
+
+export default function Home() {
+  return (
+     <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <HomePageContent />
+    </ThemeProvider>
+  )
 }
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
