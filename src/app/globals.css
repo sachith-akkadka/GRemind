@@ -21,16 +21,15 @@
     --secondary-foreground: 240 5% 25%;
     --muted: 240 5% 92%;
     --muted-foreground: 240 4% 45%;
-    --accent: 340 85% 70%; /* Bright Pink/Coral */
-    --accent-foreground: 340 15% 25%;
+    --accent: 175 70% 50%; /* Vibrant Teal */
+    --accent-foreground: 175 15% 25%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 240 6% 88%;
     --input: 240 6% 90%;
     --ring: 250 65% 60%;
-    --radius: 0.5rem;
     --chart-1: 250 65% 60%;
-    --chart-2: 340 85% 70%;
+    --chart-2: 175 70% 50%;
     --chart-3: 190 70% 60%;
     --chart-4: 40 90% 65%;
     --chart-5: 210 75% 55%;
