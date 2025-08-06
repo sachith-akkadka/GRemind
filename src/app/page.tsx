@@ -12,36 +12,30 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 
 function HomePageContent() {
-  const dotPatternBackground = `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3C/g%3E%3C/svg%3E")`;
-
   return (
      <div className="flex flex-col min-h-screen bg-background">
-      <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <AppLogo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold">G-Remind</h1>
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+            <AppLogo className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-bold">G-Remind</h1>
+            </div>
+            <nav className="flex items-center gap-4">
+            <ThemeToggle />
+            <Button variant="ghost" asChild>
+                <Link href="/login">Log In</Link>
+            </Button>
+            <Button asChild>
+                <Link href="/signup">Sign Up</Link>
+            </Button>
+            </nav>
         </div>
-        <nav className="flex items-center gap-4">
-          <ThemeToggle />
-          <Button variant="ghost" asChild>
-            <Link href="/login">Log In</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/signup">Sign Up</Link>
-          </Button>
-        </nav>
       </header>
 
       <main className="flex-1">
         <section 
-          className="relative py-20 md:py-32"
-           style={{
-            backgroundImage: dotPatternBackground,
-            backgroundRepeat: 'repeat',
-            backgroundPosition: 'center',
-          }}
+          className="relative py-20 md:py-32 bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20"
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/95 to-background"></div>
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-4xl md:text-6xl font-bold text-foreground">
               Never forget a task at a location again.
