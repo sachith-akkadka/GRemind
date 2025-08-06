@@ -72,13 +72,24 @@ export default function SettingsPage() {
     };
     
     const handleSaveChanges = async () => {
-        if (!user || displayName === user.displayName) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser || displayName === currentUser.displayName) return;
+
+        if (displayName.trim().split(' ').length < 2) {
+            toast({
+                title: "Full Name Required",
+                description: "Please enter both your first and last name.",
+                variant: "destructive",
+            });
+            return;
+        }
         
         try {
-            await updateProfile(user, { displayName });
+            await updateProfile(currentUser, { displayName });
             // Manually update the user object in the auth context
             if (setUser) {
-              setUser({ ...user, displayName });
+              // Create a new object to ensure re-render
+              setUser({ ...currentUser, displayName });
             }
             toast({ title: "Profile updated successfully!" });
         } catch(error: any) {
