@@ -47,9 +47,9 @@ export function UserNav() {
     if (!name) return 'U';
     const names = name.split(' ');
     if (names.length > 1) {
-        return names[0][0] + names[names.length - 1][0];
+        return (names[0][0] + names[names.length - 1][0]).toUpperCase();
     }
-    return name.substring(0, 2);
+    return name.substring(0, 2).toUpperCase();
   }
 
   if (!user) {
@@ -61,9 +61,8 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
             <AvatarFallback>
-              <UserIcon className="h-4 w-4" />
+              {getInitials(user.displayName)}
             </AvatarFallback>
           </Avatar>
         </Button>

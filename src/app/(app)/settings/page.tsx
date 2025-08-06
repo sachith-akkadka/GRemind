@@ -17,18 +17,14 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import { User } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isUploading, setIsUploading] = useState(false);
     const [displayName, setDisplayName] = useState(user?.displayName || '');
 
 
@@ -38,7 +34,7 @@ export default function SettingsPage() {
         if (names.length > 1) {
             return names[0][0] + names[names.length - 1][0];
         }
-        return name.substring(0, 2);
+        return name.substring(0, 2).toUpperCase();
     }
     
     const handleClearHistory = async () => {
@@ -74,38 +70,6 @@ export default function SettingsPage() {
         });
       }
     };
-
-    const handleAvatarClick = () => {
-      fileInputRef.current?.click();
-    };
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!event.target.files || event.target.files.length === 0 || !user) {
-            return;
-        }
-
-        const file = event.target.files[0];
-        setIsUploading(true);
-        toast({ title: "Uploading photo..." });
-
-        try {
-            const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
-            await uploadBytes(storageRef, file);
-            const photoURL = await getDownloadURL(storageRef);
-
-            await updateProfile(user, { photoURL });
-            
-            // This will trigger a re-render in components that use useAuth
-            // Since the user object is part of the auth state, this should propagate.
-            // We might need a manual way to refresh the user object if not.
-            toast({ title: "Profile photo updated successfully!" });
-        } catch (error) {
-            console.error("Error uploading photo:", error);
-            toast({ title: "Upload Failed", description: "Could not upload your photo. Please try again.", variant: "destructive" });
-        } finally {
-            setIsUploading(false);
-        }
-    };
     
     const handleSaveChanges = async () => {
         if (!user || displayName === user.displayName) return;
@@ -128,22 +92,10 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
              <Avatar className="h-16 w-16">
-                <AvatarImage src={user?.photoURL || ''} />
                 <AvatarFallback>
-                    <User className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-2xl font-bold">{getInitials(user?.displayName)}</span>
                 </AvatarFallback>
             </Avatar>
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange}
-                className="hidden" 
-                accept="image/*"
-            />
-            <Button variant="outline" onClick={handleAvatarClick} disabled={isUploading}>
-              {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isUploading ? 'Uploading...' : 'Change Photo'}
-            </Button>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -152,7 +104,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={user?.email || ''} readOnly className="focus-visible:ring-0 focus-visible:ring-offset-0" />
+              <Input id="email" type="email" defaultValue={user?.email || ''} readOnly className="focus-visible:ring-0 focus-visible:ring-offset-0 bg-muted border-muted" />
             </div>
           </div>
         </CardContent>
