@@ -17,7 +17,7 @@ import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
 import {
   ListFilter,
-  PlusCircle,
+  Plus,
   Search,
   Calendar as CalendarIcon,
   MapPin,
@@ -804,11 +804,10 @@ export default function TasksPage() {
       </Tabs>
 
       <Button
-        size="icon"
-        className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-lg"
+        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg"
         onClick={handleNewTaskClick}
       >
-        <PlusCircle className="h-10 w-10" />
+        <Plus className="h-8 w-8" />
         <span className="sr-only">New Task</span>
       </Button>
 
