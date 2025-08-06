@@ -47,8 +47,9 @@ export default function DashboardPage() {
                  return {
                     id: doc.id,
                     ...data,
-                    dueDate: (data.dueDate as Timestamp).toDate().toISOString(),
-                    completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
+                    // Safely convert Timestamps to ISO strings
+                    dueDate: data.dueDate instanceof Timestamp ? data.dueDate.toDate().toISOString() : data.dueDate,
+                    completedAt: data.completedAt instanceof Timestamp ? data.completedAt.toDate().toISOString() : data.completedAt,
                  } as Task
             });
             setTasks(tasksData);

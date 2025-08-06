@@ -8,6 +8,7 @@ import {
   onSnapshot,
   writeBatch,
   getDocs,
+  Timestamp,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
@@ -62,8 +63,9 @@ export default function HistoryPage() {
           tasksData.push({
             id: doc.id,
             ...data,
-            dueDate: data.dueDate.toDate().toISOString(),
-            completedAt: data.completedAt?.toDate().toISOString(),
+            // Safely convert Timestamps to ISO strings
+            dueDate: data.dueDate instanceof Timestamp ? data.dueDate.toDate().toISOString() : data.dueDate,
+            completedAt: data.completedAt instanceof Timestamp ? data.completedAt.toDate().toISOString() : data.completedAt,
           } as Task);
         });
         setCompletedTasks(tasksData.sort((a,b) => parseISO(b.completedAt!).getTime() - parseISO(a.completedAt!).getTime()));
