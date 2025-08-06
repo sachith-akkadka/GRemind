@@ -80,6 +80,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useDebounce } from 'use-debounce';
+import { useRouter } from 'next/navigation';
 
 function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void, userLocation: string | null }) {
   const statusVariant = {
@@ -91,6 +92,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   } as const;
   const { toast } = useToast();
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const router = useRouter();
 
 
   const handleMarkAsDone = () => {
@@ -105,12 +107,13 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
     setIsNavigating(true);
     let destination = task.store;
 
+    if (!userLocation) {
+        toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive" });
+        setIsNavigating(false);
+        return;
+    }
+
     if (!destination) {
-        if (!userLocation) {
-             toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive" });
-             setIsNavigating(false);
-             return;
-        }
         toast({ title: "Finding location...", description: `Searching for a place to complete "${task.title}"...` });
         try {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
@@ -129,9 +132,12 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
             return;
         }
     }
+    
+    const params = new URLSearchParams();
+    params.set('origin', userLocation);
+    params.set('destination', destination);
+    router.push(`/map?${params.toString()}`);
 
-    const query = encodeURIComponent(destination);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
     setIsNavigating(false);
   };
 
@@ -226,6 +232,7 @@ function NewTaskSheet({
   categories: Category[];
 }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
@@ -341,9 +348,7 @@ function NewTaskSheet({
 
   const handleMapIconClick = () => {
     if (userLocation) {
-      const searchQuery = title || 'a store';
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}&ll=${userLocation}`;
-      window.open(mapsUrl, '_blank');
+      router.push('/map');
     } else {
       toast({
         title: "Location Needed",
@@ -606,6 +611,7 @@ function NewTaskSheet({
 export default function TasksPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -802,33 +808,34 @@ export default function TasksPage() {
 
     try {
         const locationsToVisit: string[] = [];
+        const unresolvedTasks: Task[] = [];
 
         for (const task of tasksToNavigate) {
             if (task.store) {
                 locationsToVisit.push(task.store);
             } else {
-                const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
-                if (locationResult) {
-                    const fullAddress = `${locationResult.name}, ${locationResult.address}`;
-                    locationsToVisit.push(fullAddress);
-                    // Optionally update the task in firestore
-                    const taskRef = doc(db, 'tasks', task.id);
-                    await updateDoc(taskRef, { store: fullAddress });
-                } else {
-                    console.warn(`Could not find location for task: ${task.title}`);
-                }
+                unresolvedTasks.push(task);
             }
         }
-
-        if (locationsToVisit.length > 1) {
-            const waypoints = locationsToVisit.slice(0, -1).map(loc => encodeURIComponent(loc)).join('|');
-            const destination = encodeURIComponent(locationsToVisit[locationsToVisit.length - 1]);
-            const origin = userLocation; 
-            window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}`, '_blank');
-        } else if (locationsToVisit.length === 1) {
-            // If only one location, just navigate to it
-             const query = encodeURIComponent(locationsToVisit[0]);
-             window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+        
+        for (const task of unresolvedTasks) {
+            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
+            if (locationResult) {
+                const fullAddress = `${locationResult.name}, ${locationResult.address}`;
+                locationsToVisit.push(fullAddress);
+                const taskRef = doc(db, 'tasks', task.id);
+                await updateDoc(taskRef, { store: fullAddress });
+            } else {
+                console.warn(`Could not find location for task: ${task.title}`);
+            }
+        }
+        
+        if (locationsToVisit.length > 0) {
+            const params = new URLSearchParams();
+            params.set('origin', userLocation);
+            params.set('destination', locationsToVisit[locationsToVisit.length - 1]);
+            locationsToVisit.slice(0, -1).forEach(wp => params.append('waypoints', wp));
+            router.push(`/map?${params.toString()}`);
         } else {
             toast({ title: "No locations found", description: "Could not find any locations for the current tasks.", variant: "destructive" });
         }
@@ -864,7 +871,7 @@ export default function TasksPage() {
             <TabsTrigger value="pending">Pending</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
-            {getActionableTaskCount() >= 2 && (
+            {getActionableTaskCount() >= 1 && (
                 <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation} disabled={isNavigatingMultiple}>
                   {isNavigatingMultiple ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
