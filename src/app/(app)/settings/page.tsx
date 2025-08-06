@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,20 +19,20 @@ import { signOut, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { User } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, setUser } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
     const [displayName, setDisplayName] = useState(user?.displayName || '');
+    const [isSaving, setIsSaving] = useState(false);
 
 
     const getInitials = (name?: string | null) => {
         if (!name) return 'U';
         const names = name.split(' ');
         if (names.length > 1 && names[1]) {
-            return names[0][0] + names[names.length - 1][0];
+            return (names[0][0] + names[names.length - 1][0]).toUpperCase();
         }
         return name.substring(0, 2).toUpperCase();
     }
@@ -73,8 +73,8 @@ export default function SettingsPage() {
     
     const handleSaveChanges = async () => {
         const currentUser = auth.currentUser;
-        if (!currentUser || displayName === currentUser.displayName) return;
-
+        if (!currentUser) return;
+        
         if (displayName.trim().split(' ').length < 2) {
             toast({
                 title: "Full Name Required",
@@ -83,13 +83,16 @@ export default function SettingsPage() {
             });
             return;
         }
-        
+
+        if (displayName === currentUser.displayName) return;
+
+        setIsSaving(true);
         try {
             await updateProfile(currentUser, { displayName });
-            // Manually update the user object in the auth context
             if (setUser) {
-              // Create a new object to ensure re-render
-              setUser({ ...currentUser, displayName });
+              // Create a new user object to force re-render
+              const updatedUser = { ...currentUser, displayName };
+              setUser(updatedUser);
             }
             toast({ title: "Profile updated successfully!" });
         } catch(error: any) {
@@ -97,13 +100,16 @@ export default function SettingsPage() {
             if (error.code === 'auth/requires-recent-login') {
                 description = "This action requires a recent sign-in. Please log out and log back in to update your profile.";
             } else {
-                description = error.message;
+                console.error(error);
+                description = `An unexpected error occurred: ${error.message}`;
             }
             toast({ 
                 title: "Update Failed", 
                 description: description,
                 variant: "destructive" 
             });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -134,7 +140,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={handleSaveChanges}>Save Changes</Button>
+          <Button onClick={handleSaveChanges} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
         </CardFooter>
       </Card>
 
