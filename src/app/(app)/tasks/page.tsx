@@ -865,7 +865,7 @@ export default function TasksPage() {
     <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 relative">
       <Tabs defaultValue="pending" onValueChange={setActiveTab}>
         <div className="flex items-center">
-          <TabsList>
+           <TabsList className="bg-card/20 backdrop-blur-sm border border-white/10">
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="tomorrow">Tomorrow</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -906,7 +906,7 @@ export default function TasksPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search tasks or locations..." 
-              className="pl-8" 
+              className="pl-8 bg-card/20 backdrop-blur-sm border-white/10" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -955,3 +955,5 @@ export default function TasksPage() {
     </>
   );
 }
+
+    
