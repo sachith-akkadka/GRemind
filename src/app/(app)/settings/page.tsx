@@ -270,7 +270,7 @@ export default function SettingsPage() {
            <div className="flex items-center justify-between">
             <div>
               <Label>Default Reminder</Label>
-              <p className="text-sm text-muted-foreground">Set a default reminder time before due dates.</p>
+              <p className="text-sm text-muted-foreground">Set a default reminder time before a task is due.</p>
             </div>
              <Select value={defaultReminder} onValueChange={setDefaultReminder}>
                 <SelectTrigger className="w-[180px]">
