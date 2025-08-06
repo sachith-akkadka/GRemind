@@ -12,7 +12,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 
 function HomePageContent() {
-  const emojiBackground = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ctext x='10' y='20' font-size='14' opacity='0.5'%3E🗺️%3C/text%3E%3Ctext x='70' y='30' font-size='14' opacity='0.5'%3E✅%3C/text%3E%3Ctext x='30' y='70' font-size='14' opacity='0.5'%3E📍%3C/text%3E%3Ctext x='80' y='85' font-size='14' opacity='0.5'%3E🗓️%3C/text%3E%3Ctext x='5' y='90' font-size='14' opacity='0.5'%3E💡%3C/text%3E%3C/svg%3E")`;
+  const dotPatternBackground = `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3C/g%3E%3C/svg%3E")`;
 
   return (
      <div className="flex flex-col min-h-screen bg-background">
@@ -36,13 +36,12 @@ function HomePageContent() {
         <section 
           className="relative py-20 md:py-32"
            style={{
-            backgroundImage: emojiBackground,
+            backgroundImage: dotPatternBackground,
             backgroundRepeat: 'repeat',
-            backgroundSize: '200px 200px',
             backgroundPosition: 'center',
           }}
         >
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/95 to-background"></div>
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-4xl md:text-6xl font-bold text-foreground">
               Never forget a task at a location again.
