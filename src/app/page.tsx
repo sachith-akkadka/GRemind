@@ -37,7 +37,7 @@ function HomePageContent() {
           className="relative py-20 md:py-32"
         >
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent pb-2">
               Never forget a task at a location again.
             </h2>
             <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-muted-foreground">
@@ -87,7 +87,7 @@ function HomePageContent() {
         <section className="py-20 md:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
-                    <h3 className="text-3xl font-bold">How It Works</h3>
+                    <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">How It Works</h3>
                     <p className="mt-2 text-muted-foreground">Get started in just 3 simple steps.</p>
                 </div>
                 <div className="grid md:grid-cols-3 gap-8">
@@ -118,7 +118,7 @@ function HomePageContent() {
                          <Image src="https://placehold.co/600x400.png" alt="App Screenshot of map view" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface map" />
                     </div>
                     <div>
-                        <h3 className="text-3xl font-bold">Designed for life on the go</h3>
+                        <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Designed for life on the go</h3>
                         <p className="mt-4 text-muted-foreground">
                            G-Remind's clean, intuitive interface helps you manage your location-based tasks without the clutter. Enjoy a calm, focused experience that adapts to your needs.
                         </p>
@@ -144,7 +144,7 @@ function HomePageContent() {
         <section className="py-20 md:py-24">
              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
-                    <h3 className="text-3xl font-bold">Loved by users everywhere</h3>
+                    <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Loved by users everywhere</h3>
                     <p className="mt-2 text-muted-foreground">See what our users are saying about us.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
