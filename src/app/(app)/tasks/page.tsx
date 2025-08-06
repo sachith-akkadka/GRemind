@@ -420,7 +420,6 @@ function NewTaskSheet({
             <SheetTitle>
               {editingTask ? 'Edit Task' : 'Create a New Task'}
             </SheetTitle>
-            <ThemeToggle />
           </div>
           <SheetDescription>
             {greeting}

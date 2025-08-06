@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
     const [isCollapsed, setIsCollapsed] = React.useState(false);
@@ -44,7 +45,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 >
                 <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
                     <AppLogo className="h-6 w-6 text-primary flex-shrink-0" />
-                     <div className={cn("flex items-center", isCollapsed ? 'w-0' : 'w-auto')}>
+                     <div className={cn("flex items-center overflow-hidden transition-all duration-300", isCollapsed ? 'w-0' : 'w-auto ml-2')}>
                         <span className="font-bold text-xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
                            {appName}
                         </span>
@@ -58,9 +59,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             )}
             <div
             className={cn(
-                'flex flex-col transition-all duration-300 ease-in-out sm:py-2',
-                !isMobile && 'sm:pl-60',
-                isCollapsed && !isMobile && 'sm:pl-14'
+                'flex flex-col transition-all duration-300 ease-in-out',
+                !isMobile && (isCollapsed ? 'sm:pl-14' : 'sm:pl-60')
             )}
             >
             <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card/20 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -97,6 +97,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     </Button>
                 )}
                 <div className="ml-auto flex items-center gap-2">
+                <ThemeToggle />
                 <UserNav />
                 </div>
             </header>
