@@ -211,6 +211,7 @@ function NewTaskSheet({
   onTaskSubmit,
   editingTask,
   userLocation,
+  userName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -219,6 +220,7 @@ function NewTaskSheet({
   ) => void;
   editingTask: Task | null;
   userLocation: string | null;
+  userName: string | null;
 }) {
   const { toast } = useToast();
   const [title, setTitle] = React.useState('');
@@ -385,6 +387,16 @@ function NewTaskSheet({
     onOpenChange(false);
   };
 
+  const greeting = React.useMemo(() => {
+    if(editingTask) return "Update the details of your task.";
+
+    const firstName = userName?.split(' ')[0];
+    if (firstName) {
+        return `Hey, ${firstName}! What's on your mind today?`;
+    }
+    return 'Fill in the details below to add a new task to your list.';
+  }, [editingTask, userName])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg">
@@ -393,9 +405,7 @@ function NewTaskSheet({
             {editingTask ? 'Edit Task' : 'Create a New Task'}
           </SheetTitle>
           <SheetDescription>
-            {editingTask
-              ? 'Update the details of your task.'
-              : 'Fill in the details below to add a new task to your list.'}
+            {greeting}
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-4 py-4">
@@ -862,6 +872,7 @@ export default function TasksPage() {
         onTaskSubmit={handleTaskSubmit}
         editingTask={editingTask}
         userLocation={userLocation}
+        userName={user?.displayName || null}
       />
     </>
   );

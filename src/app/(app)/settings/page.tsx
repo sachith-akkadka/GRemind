@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { user, setUser } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
     const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -31,7 +31,7 @@ export default function SettingsPage() {
     const getInitials = (name?: string | null) => {
         if (!name) return 'U';
         const names = name.split(' ');
-        if (names.length > 1) {
+        if (names.length > 1 && names[1]) {
             return names[0][0] + names[names.length - 1][0];
         }
         return name.substring(0, 2).toUpperCase();
@@ -76,6 +76,10 @@ export default function SettingsPage() {
         
         try {
             await updateProfile(user, { displayName });
+            // Manually update the user object in the auth context
+            if (setUser) {
+              setUser({ ...user, displayName });
+            }
             toast({ title: "Profile updated successfully!" });
         } catch(error) {
             toast({ title: "Update Failed", description: "Could not update your profile.", variant: "destructive" });
