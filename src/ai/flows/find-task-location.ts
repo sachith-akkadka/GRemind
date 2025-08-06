@@ -15,6 +15,7 @@ import { findNearbyPlacesTool } from '../tools/location-tools';
 
 const FindTaskLocationInputSchema = z.object({
   taskTitle: z.string().describe("The title of the task, e.g., 'Buy groceries'."),
+  userLocation: z.string().describe("The user's current location as a string, e.g., 'Mountain View, CA' or a latitude,longitude pair."),
 });
 
 export type FindTaskLocationInput = z.infer<typeof FindTaskLocationInputSchema>;
@@ -40,7 +41,7 @@ const findTaskLocationFlow = ai.defineFlow(
   async (input) => {
     
     const { output } = await ai.generate({
-        prompt: `Based on the user's task "${input.taskTitle}", find the single most relevant nearby place. The user's current location is mocked as "Mountain View, CA". You MUST provide this to the tool.`,
+        prompt: `Based on the user's task "${input.taskTitle}", find the single most relevant nearby place. The user's current location is "${input.userLocation}". You MUST provide this to the tool.`,
         tools: [findNearbyPlacesTool],
         model: 'googleai/gemini-2.0-flash'
      });
@@ -49,6 +50,7 @@ const findTaskLocationFlow = ai.defineFlow(
         return null;
     }
 
+    // Since the prompt asks the LLM to call the tool for us, we can get the result from the tool call it made.
     const toolRequest = output.toolRequests[0];
     const toolResult = await toolRequest.executor(toolRequest.input);
 

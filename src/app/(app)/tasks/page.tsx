@@ -81,7 +81,7 @@ import {
 } from '@/components/ui/select';
 import { useDebounce } from 'use-debounce';
 
-function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void }) {
+function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void, userLocation: string | null }) {
   const statusVariant = {
     pending: 'secondary',
     today: 'default',
@@ -105,9 +105,14 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
     let destination = task.store;
 
     if (!destination) {
+        if (!userLocation) {
+             toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive" });
+             setIsNavigating(false);
+             return;
+        }
         toast({ title: "Finding location...", description: `Searching for a place to complete "${task.title}"...` });
         try {
-            const locationResult = await findTaskLocation({ taskTitle: task.title });
+            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
                 destination = `${locationResult.name}, ${locationResult.address}`;
                 // Optionally, update the task with the found location
@@ -790,14 +795,14 @@ export default function TasksPage() {
         <TabsContent value="pending">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {pendingTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
+              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="today">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {todayTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} />
+              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
             ))}
           </div>
         </TabsContent>
