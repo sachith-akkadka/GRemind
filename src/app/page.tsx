@@ -13,7 +13,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 function HomePageContent() {
   return (
-     <div className="flex flex-col min-h-screen bg-background">
+     <div className="flex flex-col min-h-screen bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20">
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -34,7 +34,7 @@ function HomePageContent() {
 
       <main className="flex-1">
         <section 
-          className="relative py-20 md:py-32 bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20"
+          className="relative py-20 md:py-32"
         >
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-4xl md:text-6xl font-bold text-foreground">
@@ -51,7 +51,7 @@ function HomePageContent() {
           </div>
         </section>
 
-        <section className="py-20 md:py-24 bg-background">
+        <section className="py-20 md:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h3 className="text-3xl font-bold">A smarter way to manage your errands</h3>
@@ -84,9 +84,9 @@ function HomePageContent() {
           </div>
         </section>
 
-        <section className="py-20 md:py-24 bg-card">
+        <section className="py-20 md:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+                 <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center bg-card/20 backdrop-blur-sm p-8 rounded-2xl border border-white/10">
                     <div>
                         <Image src="https://placehold.co/600x400.png" alt="App Screenshot" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface map" />
                     </div>
@@ -115,7 +115,7 @@ function HomePageContent() {
         </section>
       </main>
 
-      <footer className="bg-card border-t">
+      <footer className="bg-card/20 backdrop-blur-sm border-t border-white/10">
         <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} G-Remind. All rights reserved.</p>
         </div>
@@ -140,7 +140,7 @@ export default function Home() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <Card className="text-center bg-background/50 hover:bg-card hover:shadow-lg transition-all duration-300 border">
+    <Card className="text-center bg-card/20 backdrop-blur-sm hover:bg-card/40 hover:shadow-lg transition-all duration-300 border border-white/10">
       <CardHeader>
         <div className="mx-auto bg-primary/10 rounded-full h-16 w-16 flex items-center justify-center">
           {icon}
