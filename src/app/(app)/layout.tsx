@@ -44,7 +44,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 >
                 <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
                     <AppLogo className="h-6 w-6 text-primary flex-shrink-0" />
-                     <div className={cn("flex items-center transition-all duration-300 ease-in-out", isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100')}>
+                     <div className={cn("flex items-center", isCollapsed ? 'w-0' : 'w-auto')}>
                         <span className="font-bold text-xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
                            {appName}
                         </span>
@@ -58,7 +58,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             )}
             <div
             className={cn(
-                'flex flex-col sm:gap-4 sm:py-4 transition-all duration-300 ease-in-out',
+                'flex flex-col transition-all duration-300 ease-in-out sm:py-2',
                 !isMobile && 'sm:pl-60',
                 isCollapsed && !isMobile && 'sm:pl-14'
             )}
