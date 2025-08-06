@@ -189,7 +189,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
           </div>
         )}
       </CardContent>
-      {task.status !== 'completed' && task.store && (
+      {task.status !== 'completed' && (
         <CardFooter className="flex justify-end">
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
              {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
