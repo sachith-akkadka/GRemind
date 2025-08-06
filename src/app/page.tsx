@@ -14,11 +14,15 @@ import { ThemeToggle } from '@/components/theme-toggle';
 function HomePageContent() {
   return (
      <div className="flex flex-col min-h-screen bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20">
-      <header className="bg-card/20 backdrop-blur-sm sticky top-0 z-40 border-b border-white/10">
+      <header className="bg-card/20 backdrop-blur-sm sticky top-0 z-40 border border-white/10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div className="flex items-center gap-2">
             <AppLogo className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">G-Remind</h1>
+            <h1 className="text-2xl font-bold">
+                 <span className="animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
+                    G-Remind
+                  </span>
+            </h1>
             </div>
             <nav className="flex items-center gap-4">
             <ThemeToggle />
@@ -37,8 +41,10 @@ function HomePageContent() {
           className="relative py-20 md:py-32"
         >
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent pb-2 inline-block">
-              Never forget a task at a location again.
+            <h2 className="text-4xl md:text-6xl font-bold pb-2 inline-block">
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Never forget a task at a location again.
+              </span>
             </h2>
             <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-muted-foreground">
               G-Remind is your intelligent assistant for location-based tasks. Set reminders for places, and get notified when you're nearby.
@@ -54,7 +60,11 @@ function HomePageContent() {
         <section className="py-20 md:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-block">A smarter way to manage your errands</h3>
+              <h3 className="text-3xl font-bold inline-block">
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  A smarter way to manage your errands
+                </span>
+              </h3>
               <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
                 From AI-powered suggestions to optimized routing, we've got you covered.
               </p>
@@ -87,7 +97,11 @@ function HomePageContent() {
         <section className="py-20 md:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
-                    <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-block">How It Works</h3>
+                    <h3 className="text-3xl font-bold inline-block">
+                      <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                        How It Works
+                      </span>
+                    </h3>
                     <p className="mt-2 text-muted-foreground">Get started in just 3 simple steps.</p>
                 </div>
                 <div className="grid md:grid-cols-3 gap-8">
@@ -118,7 +132,11 @@ function HomePageContent() {
                          <Image src="https://placehold.co/600x400.png" alt="App Screenshot of map view" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface map" />
                     </div>
                     <div>
-                        <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-block">Designed for life on the go</h3>
+                        <h3 className="text-3xl font-bold inline-block">
+                          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                            Designed for life on the go
+                          </span>
+                        </h3>
                         <p className="mt-4 text-muted-foreground">
                            G-Remind's clean, intuitive interface helps you manage your location-based tasks without the clutter. Enjoy a calm, focused experience that adapts to your needs.
                         </p>
@@ -144,7 +162,11 @@ function HomePageContent() {
         <section className="py-20 md:py-24">
              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
-                    <h3 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-block">Loved by users everywhere</h3>
+                    <h3 className="text-3xl font-bold inline-block">
+                      <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                        Loved by users everywhere
+                      </span>
+                    </h3>
                     <p className="mt-2 text-muted-foreground">See what our users are saying about us.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -166,7 +188,11 @@ function HomePageContent() {
 
         <section className="py-20 md:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                 <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent inline-block">Ready to take control of your tasks?</h2>
+                 <h2 className="text-3xl md:text-4xl font-bold inline-block">
+                    <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      Ready to take control of your tasks?
+                    </span>
+                  </h2>
                 <p className="mt-4 text-lg text-muted-foreground">
                     Sign up for free and start organizing your life, one location at a time.
                 </p>
