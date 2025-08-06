@@ -12,11 +12,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updateProfile } from 'firebase/auth';
-import { auth, db, storage } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
@@ -81,8 +81,18 @@ export default function SettingsPage() {
               setUser({ ...user, displayName });
             }
             toast({ title: "Profile updated successfully!" });
-        } catch(error) {
-            toast({ title: "Update Failed", description: "Could not update your profile.", variant: "destructive" });
+        } catch(error: any) {
+            let description = "Could not update your profile.";
+            if (error.code === 'auth/requires-recent-login') {
+                description = "This action requires a recent sign-in. Please log out and log back in to update your profile.";
+            } else {
+                description = error.message;
+            }
+            toast({ 
+                title: "Update Failed", 
+                description: description,
+                variant: "destructive" 
+            });
         }
     };
 
