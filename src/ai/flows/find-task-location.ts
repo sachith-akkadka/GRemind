@@ -39,30 +39,17 @@ const findTaskLocationFlow = ai.defineFlow(
     outputSchema: z.nullable(FindTaskLocationOutputSchema),
   },
   async (input) => {
-    
-    const { output } = await ai.generate({
-        prompt: `You MUST use the findNearbyPlacesTool to find the single most relevant nearby place for the following user task.
-        - User's Task: "${input.taskTitle}"
-        - User's Current Location: "${input.userLocation}"
-        
-        Use the task title as the query for the tool. Do not make up a location. Call the tool now.`,
-        tools: [findNearbyPlacesTool],
-        model: 'googleai/gemini-2.0-flash'
-     });
+    // This is a more direct and reliable approach. Instead of asking an LLM
+    // to call the tool for us, we call the tool directly with the task title as the query.
+    // This mirrors the logic in `suggest-locations` which is known to work.
+    const toolResult = await findNearbyPlacesTool({ query: input.taskTitle, userLocation: input.userLocation });
 
-    if (!output || !output.toolRequests || output.toolRequests.length === 0) {
-        return null;
-    }
-
-    // Since the prompt asks the LLM to call the tool for us, we can get the result from the tool call it made.
-    const toolRequest = output.toolRequests[0];
-    const toolResult = await toolRequest.executor(toolRequest.input);
-
+    // If the tool returns any places, we return the first one, which is the most relevant/closest.
     if (toolResult.places && toolResult.places.length > 0) {
-      // Return only the first, most relevant result
       return toolResult.places[0];
     }
     
+    // If no places are found, return null.
     return null;
   }
 );
