@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Navigation, Zap, BrainCircuit } from 'lucide-react';
+import { MapPin, Navigation, Zap, BrainCircuit, Star } from 'lucide-react';
 import { AppLogo } from '@/components/icons';
 import Image from "next/image";
 import { ThemeProvider } from 'next-themes';
@@ -86,9 +86,36 @@ function HomePageContent() {
 
         <section className="py-20 md:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-12">
+                    <h3 className="text-3xl font-bold">How It Works</h3>
+                    <p className="mt-2 text-muted-foreground">Get started in just 3 simple steps.</p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-8">
+                    <HowItWorksStep
+                        step="1"
+                        title="Create Your Task"
+                        description="Quickly add a task with our AI-powered suggestions. 'Buy groceries' or 'Pick up prescription'—just start typing."
+                    />
+                     <HowItWorksStep
+                        step="2"
+                        title="Tag a Location"
+                        description="Link your task to a specific place. G-Remind will find the best spot for you, from stores to offices."
+                    />
+                     <HowItWorksStep
+                        step="3"
+                        title="Get Smart Reminders"
+                        description="Receive a notification right when you arrive. No more forgotten errands or missed opportunities."
+                    />
+                </div>
+            </div>
+        </section>
+        
+        <section className="py-20 md:py-24">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                  <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center bg-card/20 backdrop-blur-sm p-8 rounded-2xl border border-white/10">
-                    <div>
-                        <Image src="https://placehold.co/600x400.png" alt="App Screenshot" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface map" />
+                    <div className="space-y-6">
+                        <Image src="https://placehold.co/600x400.png" alt="App Screenshot of task list" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface tasks" />
+                         <Image src="https://placehold.co/600x400.png" alt="App Screenshot of map view" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface map" />
                     </div>
                     <div>
                         <h3 className="text-3xl font-bold">Designed for life on the go</h3>
@@ -110,6 +137,43 @@ function HomePageContent() {
                             </li>
                         </ul>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section className="py-20 md:py-24">
+             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-12">
+                    <h3 className="text-3xl font-bold">Loved by users everywhere</h3>
+                    <p className="mt-2 text-muted-foreground">See what our users are saying about us.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <TestimonialCard
+                        quote="I used to forget to pick up dry cleaning all the time. G-Remind has been a lifesaver. The location alerts are genius!"
+                        author="Sarah J."
+                    />
+                     <TestimonialCard
+                        quote="The multi-stop navigation is my favorite feature. It plans my entire errand run in seconds. I'm saving so much time."
+                        author="Mike R."
+                    />
+                     <TestimonialCard
+                        quote="Finally, a to-do app that understands I'm not always at my desk. Super intuitive and beautifully designed."
+                        author="Alex D."
+                    />
+                </div>
+             </div>
+        </section>
+
+        <section className="py-20 md:py-24">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                 <h2 className="text-3xl md:text-4xl font-bold">Ready to take control of your tasks?</h2>
+                <p className="mt-4 text-lg text-muted-foreground">
+                    Sign up for free and start organizing your life, one location at a time.
+                </p>
+                <div className="mt-8">
+                    <Button size="lg" asChild>
+                        <Link href="/signup">Get Started Now</Link>
+                    </Button>
                 </div>
             </div>
         </section>
@@ -152,4 +216,30 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode; titl
       </CardContent>
     </Card>
   );
+}
+
+function HowItWorksStep({ step, title, description }: { step: string; title: string; description: string }) {
+    return (
+        <Card className="text-center bg-card/20 backdrop-blur-sm p-6 border border-white/10">
+            <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-xl mb-4">
+                {step}
+            </div>
+            <h4 className="text-xl font-semibold mb-2">{title}</h4>
+            <p className="text-muted-foreground">{description}</p>
+        </Card>
+    );
+}
+
+function TestimonialCard({ quote, author }: { quote: string; author: string }) {
+    return (
+        <Card className="bg-card/20 backdrop-blur-sm p-6 border border-white/10">
+            <CardContent className="p-0">
+                <div className="flex mb-2">
+                    {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />)}
+                </div>
+                <p className="text-muted-foreground mb-4 italic">"{quote}"</p>
+                <p className="font-semibold text-right">- {author}</p>
+            </CardContent>
+        </Card>
+    );
 }
