@@ -152,7 +152,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={user?.email || ''} readOnly />
+              <Input id="email" type="email" defaultValue={user?.email || ''} readOnly className="focus-visible:ring-0 focus-visible:ring-offset-0" />
             </div>
           </div>
         </CardContent>
