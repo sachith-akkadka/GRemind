@@ -39,7 +39,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             >
                 <div
                 className={cn(
-                    'flex h-16 items-center border-b px-6',
+                    'flex h-16 items-center border-b px-6 overflow-hidden',
                     isCollapsed && 'justify-center px-2'
                 )}
                 >
