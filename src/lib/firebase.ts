@@ -4,7 +4,7 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-const firebaseConfig = {
+export const firebaseConfig = {
   projectId: 'g-remind-ty66f',
   appId: '1:56082403812:web:324b312cb367184b1577f1',
   storageBucket: 'g-remind-ty66f.appspot.com',

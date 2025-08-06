@@ -2,6 +2,7 @@
 
 import React from "react";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { firebaseConfig } from "@/lib/firebase";
 
 const containerStyle = {
   width: "100%",
@@ -14,13 +15,13 @@ const center = {
 };
 
 const Map = () => {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const apiKey = firebaseConfig.apiKey;
 
   if (!apiKey) {
     return (
       <div className="flex items-center justify-center h-full bg-muted rounded-lg">
         <p className="text-muted-foreground">
-          Google Maps API key is missing. Please add it to your environment variables.
+          Google Maps API key is missing. Please check your Firebase configuration.
         </p>
       </div>
     )
