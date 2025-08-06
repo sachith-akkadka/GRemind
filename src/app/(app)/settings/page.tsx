@@ -128,58 +128,28 @@ export default function SettingsPage() {
             toast({ title: "Error Exporting Data", description: "Could not export your tasks.", variant: "destructive" });
         }
     };
-
-    const handleImportData = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = async (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (!file || !user) return;
-
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                try {
-                    const importedData = JSON.parse(event.target?.result as string);
-                    if (!importedData.tasks || !Array.isArray(importedData.tasks)) {
-                        throw new Error("Invalid JSON format.");
-                    }
-                    
-                    toast({ title: "Importing tasks...", description: "Please wait while we add your tasks."});
-
-                    const batch = writeBatch(db);
-                    importedData.tasks.forEach((task: any) => {
-                        const { id, ...taskData } = task; // Don't use imported ID
-                        const docRef = doc(collection(db, 'tasks'));
-                        batch.set(docRef, { ...taskData, userId: user.uid });
-                    });
-                    await batch.commit();
-
-                    toast({ title: "Import Successful", description: `${importedData.tasks.length} tasks have been imported.`});
-                } catch (error) {
-                     toast({ title: "Import Failed", description: "Could not import tasks. Please check the file format.", variant: "destructive" });
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    };
     
     const handleDeleteAccount = async () => {
         const currentUser = auth.currentUser;
         if (!currentUser) return;
         
         try {
+            // Delete all data associated with the user
             const batch = writeBatch(db);
+            
+            // Delete tasks
             const tasksQuery = query(collection(db, 'tasks'), where('userId', '==', currentUser.uid));
             const tasksSnapshot = await getDocs(tasksQuery);
             tasksSnapshot.forEach((doc) => batch.delete(doc.ref));
 
+            // Delete categories
             const categoriesQuery = query(collection(db, 'users', currentUser.uid, 'categories'));
             const categoriesSnapshot = await getDocs(categoriesQuery);
             categoriesSnapshot.forEach((doc) => batch.delete(doc.ref));
             
             await batch.commit();
+            
+            // Delete the user from authentication
             await deleteUser(currentUser);
             
             toast({ title: "Account Deleted", description: "Your account and all associated data have been permanently deleted." });
@@ -221,20 +191,24 @@ export default function SettingsPage() {
             return;
         }
 
+        // No changes to save
         if (displayName === currentUser.displayName) return;
 
         setIsSaving(true);
         try {
             await updateProfile(currentUser, { displayName });
             
+            // This is the key part: update the user object in the auth context
+            // so the change is reflected immediately across the app.
             if (setUser) {
-              const updatedUser = { ...currentUser, displayName, photoURL: currentUser.photoURL };
+              const updatedUser = { ...currentUser, displayName, photoURL: currentUser.photoURL }; // Keep existing photoURL
               setUser(updatedUser);
             }
 
             toast({ title: "Profile updated successfully!" });
         } catch(error: any) {
             let description = "Could not update your profile.";
+            // Check for specific Firebase error code for sensitive actions
             if (error.code === 'auth/requires-recent-login') {
                 description = "This action requires a recent sign-in. Please log out and log back in to update your profile.";
             } else {
@@ -432,13 +406,6 @@ export default function SettingsPage() {
             </div>
             <Button variant="outline" size="sm" onClick={handleExportData}>Export</Button>
           </div>
-           <div className="flex items-center justify-between">
-            <div>
-              <Label>Import Data</Label>
-              <p className="text-sm text-muted-foreground">Import tasks from a JSON file.</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleImportData}>Import</Button>
-          </div>
         </CardContent>
       </Card>
 
@@ -491,3 +458,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
