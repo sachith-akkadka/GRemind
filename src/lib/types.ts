@@ -5,7 +5,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'today' | 'completed' | 'missed';
+  status: 'pending' | 'today' | 'completed' | 'missed' | 'tomorrow';
   dueDate: string; // Storing as ISO string
   completedAt?: string; // Storing as ISO string
   category: string;
@@ -19,7 +19,7 @@ export interface Task {
 export interface FirestoreTask {
   title: string;
   description?: string;
-  status: 'pending' | 'today' | 'completed' | 'missed';
+  status: 'pending' | 'today' | 'completed' | 'missed' | 'tomorrow';
   dueDate: Timestamp;
   completedAt?: Timestamp;
   category: string;

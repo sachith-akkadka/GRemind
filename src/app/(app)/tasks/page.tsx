@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -66,7 +67,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parseISO, isToday, startOfDay } from 'date-fns';
+import { format, parseISO, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
 import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
@@ -84,6 +85,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   const statusVariant = {
     pending: 'secondary',
     today: 'default',
+    tomorrow: 'accent',
     completed: 'outline',
     missed: 'destructive',
   } as const;
@@ -372,7 +374,12 @@ function NewTaskSheet({
     const combinedDueDate = new Date(dueDate);
     combinedDueDate.setHours(hours, parseInt(minute, 10), 0, 0);
 
-    const newStatus = isToday(combinedDueDate) ? 'today' : 'pending';
+    let newStatus: Task['status'] = 'pending';
+    if (isToday(combinedDueDate)) {
+        newStatus = 'today';
+    } else if (isTomorrow(combinedDueDate)) {
+        newStatus = 'tomorrow';
+    }
 
     onTaskSubmit({
       id: editingTask?.id,
@@ -381,9 +388,7 @@ function NewTaskSheet({
       dueDate: Timestamp.fromDate(combinedDueDate),
       store: location,
       status: editingTask
-        ? isToday(combinedDueDate)
-          ? 'today'
-          : editingTask.status
+        ? newStatus
         : newStatus,
       category: category,
     });
@@ -661,22 +666,26 @@ export default function TasksPage() {
         const data = taskDoc.data() as FirestoreTask;
         if (data.status !== 'completed') {
             const taskDueDate = (data.dueDate as Timestamp).toDate();
-            let currentStatus = data.status;
+            let newStatus: Task['status'] = 'pending';
+            let shouldUpdate = false;
 
-            if (currentStatus === 'pending' && isToday(taskDueDate)) {
-                currentStatus = 'today';
+            if (isToday(taskDueDate)) {
+                newStatus = 'today';
+            } else if (isTomorrow(taskDueDate)) {
+                newStatus = 'tomorrow';
+            } else if (taskDueDate < today) {
+                newStatus = 'missed';
+            }
+
+            if(newStatus !== data.status) {
                 const taskRef = doc(db, 'tasks', taskDoc.id);
-                batch.update(taskRef, { status: 'today' });
-            } else if (currentStatus === 'today' && !isToday(taskDueDate) && taskDueDate < today) {
-                currentStatus = 'missed';
-                const taskRef = doc(db, 'tasks', taskDoc.id);
-                batch.update(taskRef, { status: 'missed' });
+                batch.update(taskRef, { status: newStatus });
             }
 
             tasksData.push({
                 id: taskDoc.id,
                 ...data,
-                status: currentStatus,
+                status: newStatus,
                 dueDate: taskDueDate.toISOString(),
                 completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
             } as Task);
@@ -813,8 +822,9 @@ export default function TasksPage() {
     )
     .filter(task => filterCategories.includes(task.category));
 
-  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'today' || task.status === 'missed');
+  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'today' || task.status === 'missed' || task.status === 'tomorrow');
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
+  const tomorrowTasks = filteredTasks.filter((task) => task.status === 'tomorrow');
   
   const actionableTaskCount = tasks.filter(t => t.status === 'pending' || t.status === 'today').length;
 
@@ -825,7 +835,8 @@ export default function TasksPage() {
         <div className="flex items-center">
           <TabsList>
             <TabsTrigger value="today">Today</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="tomorrow">Tomorrow</TabsTrigger>
+            <TabsTrigger value="pending">All Pending</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
             {actionableTaskCount >= 2 && (
@@ -878,6 +889,13 @@ export default function TasksPage() {
         <TabsContent value="today">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
             {todayTasks.map((task) => (
+              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
+            ))}
+          </div>
+        </TabsContent>
+        <TabsContent value="tomorrow">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+            {tomorrowTasks.map((task) => (
               <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
             ))}
           </div>
