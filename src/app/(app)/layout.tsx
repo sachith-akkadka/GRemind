@@ -20,7 +20,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     const [isCollapsed, setIsCollapsed] = React.useState(false);
     const isMobile = useIsMobile();
     const { user, loading } = useAuth();
-    const appName = "G-Remind".split('');
+    const appName = "G-Remind";
 
     if (loading) {
         return <div>Loading...</div>; // Or a proper skeleton loader
@@ -44,21 +44,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 >
                 <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
                     <AppLogo className="h-6 w-6 text-primary flex-shrink-0" />
-                     <div className={cn("flex items-center transition-all duration-300", isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100')}>
+                     <div className={cn("flex items-center transition-all duration-700 ease-in-out", isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100')}>
                         <span className="font-bold text-xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
-                           {appName.map((char, index) => (
-                                <span
-                                    key={index}
-                                    className="inline-block"
-                                    style={{
-                                        animation: isCollapsed ? 'none' : `fadeIn 1s ${index * 0.1}s both`,
-                                        opacity: isCollapsed ? 0 : 1,
-                                        transition: 'opacity 0.3s'
-                                    }}
-                                >
-                                    {char === ' ' ? '\u00A0' : char}
-                                </span>
-                            ))}
+                           {appName}
                         </span>
                     </div>
                 </Link>
