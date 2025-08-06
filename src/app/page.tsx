@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -11,8 +12,18 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 
 function HomePageContent() {
+  const emojiBackground = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ctext x='10' y='20' font-size='14'%3E🗺️%3C/text%3E%3Ctext x='70' y='30' font-size='14'%3E✅%3C/text%3E%3Ctext x='30' y='70' font-size='14'%3E📍%3C/text%3E%3Ctext x='80' y='85' font-size='14'%3E🗓️%3C/text%3E%3Ctext x='5' y='90' font-size='14'%3E💡%3C/text%3E%3C/svg%3E")`;
+
   return (
-     <div className="flex flex-col min-h-screen bg-background">
+     <div 
+      className="flex flex-col min-h-screen bg-background"
+      style={{
+        backgroundImage: emojiBackground,
+        backgroundRepeat: 'repeat',
+        backgroundSize: '150px 150px',
+        backgroundPosition: 'center',
+      }}
+     >
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <AppLogo className="h-8 w-8 text-primary" />
@@ -30,7 +41,7 @@ function HomePageContent() {
       </header>
 
       <main className="flex-1">
-        <section className="relative py-20 md:py-32 bg-card">
+        <section className="relative py-20 md:py-32 bg-card/90 backdrop-blur-sm">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-4xl md:text-6xl font-bold text-foreground">
               Never forget a task at a location again.
@@ -46,7 +57,7 @@ function HomePageContent() {
           </div>
         </section>
 
-        <section className="py-20 md:py-24 bg-background">
+        <section className="py-20 md:py-24 bg-background/90 backdrop-blur-sm">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h3 className="text-3xl font-bold">A smarter way to manage your errands</h3>
@@ -79,7 +90,7 @@ function HomePageContent() {
           </div>
         </section>
 
-        <section className="py-20 md:py-24 bg-card">
+        <section className="py-20 md:py-24 bg-card/90 backdrop-blur-sm">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
                     <div>
@@ -110,7 +121,7 @@ function HomePageContent() {
         </section>
       </main>
 
-      <footer className="bg-card border-t">
+      <footer className="bg-card/90 border-t backdrop-blur-sm">
         <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} G-Remind. All rights reserved.</p>
         </div>
@@ -135,7 +146,7 @@ export default function Home() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <Card className="text-center bg-card hover:shadow-lg transition-shadow border-transparent hover:border-primary">
+    <Card className="text-center bg-background/80 hover:shadow-lg transition-shadow border-transparent hover:border-primary backdrop-blur-md">
       <CardHeader>
         <div className="mx-auto bg-primary/10 rounded-full h-16 w-16 flex items-center justify-center">
           {icon}
