@@ -35,11 +35,11 @@
     --chart-5: 210 75% 55%;
   }
   .dark {
-    --background: 240 6% 8%;
+    --background: 240 6% 6%;
     --foreground: 240 5% 95%;
-    --card: 240 6% 10%;
+    --card: 240 6% 8%;
     --card-foreground: 240 5% 95%;
-    --popover: 240 6% 8%;
+    --popover: 240 6% 6%;
     --popover-foreground: 240 5% 95%;
     --primary: 255 70% 80%;
     --primary-foreground: 255 5% 15%;
