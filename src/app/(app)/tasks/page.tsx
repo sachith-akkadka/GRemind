@@ -59,8 +59,7 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { Task, FirestoreTask } from '@/lib/types';
-import { categories } from '@/lib/data';
+import type { Task, FirestoreTask, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -212,6 +211,7 @@ function NewTaskSheet({
   editingTask,
   userLocation,
   userName,
+  categories,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -221,6 +221,7 @@ function NewTaskSheet({
   editingTask: Task | null;
   userLocation: string | null;
   userName: string | null;
+  categories: Category[];
 }) {
   const { toast } = useToast();
   const [title, setTitle] = React.useState('');
@@ -230,6 +231,7 @@ function NewTaskSheet({
   const [hour, setHour] = React.useState('09');
   const [minute, setMinute] = React.useState('00');
   const [ampm, setAmpm] = React.useState('AM');
+  const [category, setCategory] = React.useState('Personal');
 
   const [location, setLocation] = React.useState('');
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
@@ -258,6 +260,7 @@ function NewTaskSheet({
         setMinute(formattedMinute);
         setAmpm(formattedAmPm.toUpperCase());
         setLocation(editingTask.store || '');
+        setCategory(editingTask.category);
       } else {
         setTitle('');
         setDescription('');
@@ -267,6 +270,7 @@ function NewTaskSheet({
         setMinute('00');
         setAmpm(format(now, 'aa').toUpperCase());
         setLocation('');
+        setCategory('Personal');
       }
       setLocationSuggestions([]);
       setTaskSuggestions([]);
@@ -381,7 +385,7 @@ function NewTaskSheet({
           ? 'today'
           : editingTask.status
         : newStatus,
-      category: editingTask?.category || 'Personal',
+      category: category,
     });
 
     onOpenChange(false);
@@ -519,6 +523,19 @@ function NewTaskSheet({
               </div>
             </div>
           </div>
+           <div className="grid gap-2">
+                <Label htmlFor="category">Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger id="category">
+                        <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
            <div className="grid gap-2 relative">
             <Label htmlFor="location">Location (Optional)</Label>
             <div className="flex items-center gap-2">
@@ -585,10 +602,9 @@ export default function TasksPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [categories, setCategories] = React.useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [filterCategories, setFilterCategories] = React.useState<string[]>(
-    categories.map(c => c.name)
-  );
+  const [filterCategories, setFilterCategories] = React.useState<string[]>([]);
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
@@ -616,6 +632,17 @@ export default function TasksPage() {
         setUserLocation("Mountain View, CA");
     }
   }, [toast]);
+  
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'users', user.uid, 'categories'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const userCategories = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+        setCategories(userCategories);
+        setFilterCategories(userCategories.map(c => c.name));
+    });
+    return () => unsubscribe();
+  }, [user]);
 
 
   React.useEffect(() => {
@@ -873,6 +900,7 @@ export default function TasksPage() {
         editingTask={editingTask}
         userLocation={userLocation}
         userName={user?.displayName || null}
+        categories={categories}
       />
     </>
   );

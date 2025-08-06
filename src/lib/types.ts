@@ -13,6 +13,7 @@ export interface Task {
   subtasks?: Subtask[];
   recurring?: 'daily' | 'weekly';
   userId: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export interface FirestoreTask {
@@ -26,6 +27,7 @@ export interface FirestoreTask {
   subtasks?: Subtask[];
   recurring?: 'daily' | 'weekly';
   userId: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 

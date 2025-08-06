@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,12 +18,13 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updateProfile, deleteUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { writeBatch, collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { writeBatch, collection, query, where, getDocs, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { categories } from '@/lib/data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { CategoryManager } from '@/components/category-manager';
+import type { Category } from '@/lib/types';
 
 
 export default function SettingsPage() {
@@ -31,13 +32,43 @@ export default function SettingsPage() {
     const { toast } = useToast();
     const router = useRouter();
     const [displayName, setDisplayName] = useState(user?.displayName || '');
-    const [bio, setBio] = useState(''); // New state for bio
+    const [bio, setBio] = useState('');
     const [isSaving, setIsSaving] = useState(false);
-
+    const [categories, setCategories] = useState<Category[]>([]);
+    
     // New states for settings
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [defaultReminder, setDefaultReminder] = useState('15');
     const [defaultCategory, setDefaultCategory] = useState('Personal');
+    const [aiReschedule, setAiReschedule] = useState(true);
+    const [weeklyReport, setWeeklyReport] = useState(false);
+    const [taskSort, setTaskSort] = useState('dueDate');
+    
+    useEffect(() => {
+        if (!user) return;
+        const q = query(collection(db, 'users', user.uid, 'categories'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            if (snapshot.empty) {
+                // Seed default categories if none exist
+                const defaultCategories = [
+                  { id: 'cat1', name: 'Groceries' },
+                  { id: 'cat2', name: 'Work' },
+                  { id: 'cat3', name: 'Personal' },
+                  { id: 'cat4', name: 'Health' },
+                  { id: 'cat5', name: 'Home' },
+                ];
+                const batch = writeBatch(db);
+                defaultCategories.forEach(cat => {
+                    const docRef = doc(db, 'users', user.uid, 'categories', cat.id);
+                    batch.set(docRef, { name: cat.name });
+                });
+                batch.commit();
+            } else {
+                setCategories(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+            }
+        });
+        return () => unsubscribe();
+    }, [user]);
 
 
     const getInitials = (name?: string | null) => {
@@ -81,7 +112,7 @@ export default function SettingsPage() {
                 return;
             }
 
-            const dataStr = JSON.stringify(tasks, null, 2);
+            const dataStr = JSON.stringify({ tasks }, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
             
             const exportFileDefaultName = `g-remind-export-${new Date().toISOString().slice(0,10)}.json`;
@@ -97,21 +128,58 @@ export default function SettingsPage() {
             toast({ title: "Error Exporting Data", description: "Could not export your tasks.", variant: "destructive" });
         }
     };
+
+    const handleImportData = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file || !user) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const importedData = JSON.parse(event.target?.result as string);
+                    if (!importedData.tasks || !Array.isArray(importedData.tasks)) {
+                        throw new Error("Invalid JSON format.");
+                    }
+                    
+                    toast({ title: "Importing tasks...", description: "Please wait while we add your tasks."});
+
+                    const batch = writeBatch(db);
+                    importedData.tasks.forEach((task: any) => {
+                        const { id, ...taskData } = task; // Don't use imported ID
+                        const docRef = doc(collection(db, 'tasks'));
+                        batch.set(docRef, { ...taskData, userId: user.uid });
+                    });
+                    await batch.commit();
+
+                    toast({ title: "Import Successful", description: `${importedData.tasks.length} tasks have been imported.`});
+                } catch (error) {
+                     toast({ title: "Import Failed", description: "Could not import tasks. Please check the file format.", variant: "destructive" });
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
     
     const handleDeleteAccount = async () => {
         const currentUser = auth.currentUser;
         if (!currentUser) return;
         
         try {
-            // Optional: delete user's data from Firestore first
             const batch = writeBatch(db);
-            const q = query(collection(db, 'tasks'), where('userId', '==', currentUser.uid));
-            const snapshot = await getDocs(q);
-            snapshot.forEach((doc) => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
+            const tasksQuery = query(collection(db, 'tasks'), where('userId', '==', currentUser.uid));
+            const tasksSnapshot = await getDocs(tasksQuery);
+            tasksSnapshot.forEach((doc) => batch.delete(doc.ref));
+
+            const categoriesQuery = query(collection(db, 'users', currentUser.uid, 'categories'));
+            const categoriesSnapshot = await getDocs(categoriesQuery);
+            categoriesSnapshot.forEach((doc) => batch.delete(doc.ref));
             
+            await batch.commit();
             await deleteUser(currentUser);
             
             toast({ title: "Account Deleted", description: "Your account and all associated data have been permanently deleted." });
@@ -247,6 +315,22 @@ export default function SettingsPage() {
                 </SelectContent>
             </Select>
           </div>
+           <div className="flex items-center justify-between">
+            <div>
+              <Label>Task Sorting</Label>
+              <p className="text-sm text-muted-foreground">Set the default sort order for your tasks.</p>
+            </div>
+             <Select value={taskSort} onValueChange={setTaskSort}>
+                <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select order" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="dueDate">Due Date</SelectItem>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="category">Category</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
@@ -284,6 +368,47 @@ export default function SettingsPage() {
                 </SelectContent>
             </Select>
           </div>
+           <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="weekly-report">Weekly Summary Report</Label>
+              <p className="text-sm text-muted-foreground">Get a weekly email with your task summary.</p>
+            </div>
+            <Switch
+              id="weekly-report"
+              checked={weeklyReport}
+              onCheckedChange={setWeeklyReport}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline">AI Features</CardTitle>
+          <CardDescription>Manage intelligent application features.</CardDescription>
+        </CardHeader>
+        <CardContent>
+           <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="ai-reschedule">AI Suggestions for Missed Tasks</Label>
+              <p className="text-sm text-muted-foreground">Automatically get reschedule suggestions.</p>
+            </div>
+            <Switch
+              id="ai-reschedule"
+              checked={aiReschedule}
+              onCheckedChange={setAiReschedule}
+            />
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline">Category Management</CardTitle>
+          <CardDescription>Add, edit, or delete your custom task categories.</CardDescription>
+        </CardHeader>
+        <CardContent>
+           <CategoryManager categories={categories} setCategories={setCategories} userId={user?.uid} />
         </CardContent>
       </Card>
       
@@ -292,20 +417,27 @@ export default function SettingsPage() {
           <CardTitle className="font-headline">Data Management</CardTitle>
           <CardDescription>Manage your application data.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="grid gap-4 sm:grid-cols-2">
            <div className="flex items-center justify-between">
             <div>
               <Label>Clear Completed Tasks</Label>
               <p className="text-sm text-muted-foreground">Permanently delete all completed tasks.</p>
             </div>
-            <Button variant="outline" onClick={handleClearHistory}>Clear Data</Button>
+            <Button variant="outline" size="sm" onClick={handleClearHistory}>Clear</Button>
           </div>
            <div className="flex items-center justify-between">
             <div>
               <Label>Export Your Data</Label>
-              <p className="text-sm text-muted-foreground">Download all your task data in a JSON file.</p>
+              <p className="text-sm text-muted-foreground">Download all your tasks as JSON.</p>
             </div>
-            <Button variant="outline" onClick={handleExportData}>Export Data</Button>
+            <Button variant="outline" size="sm" onClick={handleExportData}>Export</Button>
+          </div>
+           <div className="flex items-center justify-between">
+            <div>
+              <Label>Import Data</Label>
+              <p className="text-sm text-muted-foreground">Import tasks from a JSON file.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleImportData}>Import</Button>
           </div>
         </CardContent>
       </Card>
