@@ -115,7 +115,6 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
                 destination = `${locationResult.name}, ${locationResult.address}`;
-                // Optionally, update the task with the found location
                 onUpdateTask(task.id, { store: destination });
             } else {
                  toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive" });
@@ -334,7 +333,7 @@ function NewTaskSheet({
 
   const handleMapIconClick = () => {
     if (userLocation) {
-      const searchQuery = title || 'a store'; // Use task title for search if available
+      const searchQuery = title || 'a store';
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}&ll=${userLocation}`;
       window.open(mapsUrl, '_blank');
     } else {
@@ -583,11 +582,10 @@ export default function TasksPage() {
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
+  const [isNavigatingMultiple, setIsNavigatingMultiple] = React.useState(false);
 
 
   React.useEffect(() => {
-    // We mock the user's location for the prototype.
-    // In a real app, you'd use navigator.geolocation.getCurrentPosition
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -601,12 +599,10 @@ export default function TasksPage() {
             description: "Location suggestions may not be accurate. Using a default location.",
             variant: "destructive"
            })
-           // Fallback to a default location if GPS fails
            setUserLocation("Mountain View, CA");
         }
       );
     } else {
-        // Fallback for browsers that don't support geolocation
         setUserLocation("Mountain View, CA");
     }
   }, [toast]);
@@ -639,7 +635,6 @@ export default function TasksPage() {
                 const taskRef = doc(db, 'tasks', taskDoc.id);
                 batch.update(taskRef, { status: 'missed' });
             }
-
 
             tasksData.push({
                 id: taskDoc.id,
@@ -675,11 +670,11 @@ export default function TasksPage() {
     const { id, ...data } = taskData;
     
     try {
-        if (id) { // Editing
+        if (id) {
             const taskRef = doc(db, 'tasks', id);
             await updateDoc(taskRef, data);
             toast({ title: "Task Updated", description: `"${data.title}" has been updated.` });
-        } else { // Adding
+        } else { 
             await addDoc(collection(db, 'tasks'), {
                 ...data,
                 userId: user.uid,
@@ -722,15 +717,57 @@ export default function TasksPage() {
     );
   };
   
-  const handleStartMultiStopNavigation = () => {
-    const pendingTasksWithLocations = tasks.filter(task => (task.status === 'pending' || task.status === 'today') && task.store);
-    if (pendingTasksWithLocations.length > 1) {
-      const waypoints = pendingTasksWithLocations.slice(0, -1).map(task => encodeURIComponent(task.store!)).join('|');
-      const destination = encodeURIComponent(pendingTasksWithLocations[pendingTasksWithLocations.length - 1].store!);
-      const origin = userLocation || "My Location"; // Or get user's current location
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}`, '_blank');
+  const handleStartMultiStopNavigation = async () => {
+    if (!userLocation) {
+        toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive" });
+        return;
     }
-  };
+
+    setIsNavigatingMultiple(true);
+    toast({ title: "Planning your route...", description: "Finding the best locations for your tasks." });
+
+    const actionableTasks = tasks.filter(task => task.status === 'pending' || task.status === 'today');
+    
+    try {
+        const locationsToVisit: string[] = [];
+
+        for (const task of actionableTasks) {
+            if (task.store) {
+                locationsToVisit.push(task.store);
+            } else {
+                const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
+                if (locationResult) {
+                    const fullAddress = `${locationResult.name}, ${locationResult.address}`;
+                    locationsToVisit.push(fullAddress);
+                    // Optionally update the task in firestore
+                    const taskRef = doc(db, 'tasks', task.id);
+                    await updateDoc(taskRef, { store: fullAddress });
+                } else {
+                    console.warn(`Could not find location for task: ${task.title}`);
+                }
+            }
+        }
+
+        if (locationsToVisit.length > 1) {
+            const waypoints = locationsToVisit.slice(0, -1).map(loc => encodeURIComponent(loc)).join('|');
+            const destination = encodeURIComponent(locationsToVisit[locationsToVisit.length - 1]);
+            const origin = userLocation; 
+            window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}`, '_blank');
+        } else if (locationsToVisit.length === 1) {
+            // If only one location, just navigate to it
+             const query = encodeURIComponent(locationsToVisit[0]);
+             window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+        } else {
+            toast({ title: "No locations found", description: "Could not find any locations for the current tasks.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error during multi-stop navigation planning:", error);
+        toast({ title: "Routing Error", description: "Failed to plan the multi-stop route.", variant: "destructive" });
+    } finally {
+        setIsNavigatingMultiple(false);
+    }
+};
+
   
   const filteredTasks = tasks
     .filter(task =>
@@ -742,22 +779,24 @@ export default function TasksPage() {
   const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'today' || task.status === 'missed');
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
   
-  const actionableTasksWithLocationCount = tasks.filter(t => (t.status === 'pending' || t.status === 'today') && t.store).length;
+  const actionableTaskCount = tasks.filter(t => t.status === 'pending' || t.status === 'today').length;
 
   return (
     <>
     <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 relative">
-      <Tabs defaultValue="today">
+      <Tabs defaultValue="pending">
         <div className="flex items-center">
           <TabsList>
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
-            {actionableTasksWithLocationCount >= 2 && (
-                <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation}>
-                  <Navigation className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Start</span>
+            {actionableTaskCount >= 2 && (
+                <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation} disabled={isNavigatingMultiple}>
+                  {isNavigatingMultiple ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    {isNavigatingMultiple ? 'Planning...' : 'Start'}
+                  </span>
                 </Button>
             )}
             <DropdownMenu>
