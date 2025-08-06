@@ -189,7 +189,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask }: { task: Task
           </div>
         )}
       </CardContent>
-      {task.status !== 'completed' && (
+      {task.status !== 'completed' && task.store && (
         <CardFooter className="flex justify-end">
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
              {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
@@ -326,6 +326,20 @@ function NewTaskSheet({
         }
     }
   }, [title, location, userLocation]);
+
+  const handleMapIconClick = () => {
+    if (userLocation) {
+      const searchQuery = title || 'a store'; // Use task title for search if available
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}&ll=${userLocation}`;
+      window.open(mapsUrl, '_blank');
+    } else {
+      toast({
+        title: "Location Needed",
+        description: "Please enable location services to use this feature.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleSubmit = () => {
     if (!title || !dueDate) {
@@ -491,23 +505,27 @@ function NewTaskSheet({
               </div>
             </div>
           </div>
-          <div className="grid gap-2 relative">
+           <div className="grid gap-2 relative">
             <Label htmlFor="location">Location (Optional)</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="location"
-                placeholder="e.g., Downtown Mall"
-                className="pl-8"
-                value={location}
-                onChange={(e) => {
-                  setLocation(e.target.value);
-                  if (!showLocationSuggestions) setShowLocationSuggestions(true);
-                }}
-                onFocus={handleLocationFocus}
-                autoComplete="off"
-              />
-              {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+            <div className="flex items-center gap-2">
+              <div className="relative w-full">
+                <Input
+                  id="location"
+                  placeholder="e.g., Downtown Mall"
+                  value={location}
+                  onChange={(e) => {
+                    setLocation(e.target.value);
+                    if (!showLocationSuggestions) setShowLocationSuggestions(true);
+                  }}
+                  onFocus={handleLocationFocus}
+                  autoComplete="off"
+                />
+                {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+              </div>
+               <Button type="button" variant="outline" size="icon" onClick={handleMapIconClick}>
+                  <MapPin className="h-4 w-4" />
+                  <span className="sr-only">Find on map</span>
+                </Button>
             </div>
               {locationSuggestions.length > 0 && showLocationSuggestions && (
                 <div className="absolute z-10 w-full bg-card border rounded-md shadow-lg mt-1 top-full max-h-48 overflow-y-auto">
