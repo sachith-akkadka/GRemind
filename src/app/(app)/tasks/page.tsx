@@ -614,6 +614,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
   const [isNavigatingMultiple, setIsNavigatingMultiple] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState('pending');
 
 
   React.useEffect(() => {
@@ -680,6 +681,7 @@ export default function TasksPage() {
             if(newStatus !== data.status) {
                 const taskRef = doc(db, 'tasks', taskDoc.id);
                 batch.update(taskRef, { status: newStatus });
+                shouldUpdate = true;
             }
 
             tasksData.push({
@@ -692,7 +694,9 @@ export default function TasksPage() {
         }
       });
       
-      batch.commit().catch(err => console.error("Error updating task statuses:", err));
+      if(shouldUpdate) {
+        batch.commit().catch(err => console.error("Error updating task statuses:", err));
+      }
 
       setTasks(tasksData);
     });
@@ -762,7 +766,18 @@ export default function TasksPage() {
       checked ? [...prev, category] : prev.filter(c => c !== category)
     );
   };
-  
+
+  const filteredTasks = tasks
+    .filter(task =>
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.store?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .filter(task => filterCategories.includes(task.category));
+
+  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'today' || task.status === 'missed' || task.status === 'tomorrow');
+  const todayTasks = filteredTasks.filter((task) => task.status === 'today');
+  const tomorrowTasks = filteredTasks.filter((task) => task.status === 'tomorrow');
+
   const handleStartMultiStopNavigation = async () => {
     if (!userLocation) {
         toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive" });
@@ -771,13 +786,24 @@ export default function TasksPage() {
 
     setIsNavigatingMultiple(true);
     toast({ title: "Planning your route...", description: "Finding the best locations for your tasks." });
-
-    const actionableTasks = tasks.filter(task => task.status === 'pending' || task.status === 'today');
     
+    let tasksToNavigate: Task[] = [];
+    switch (activeTab) {
+        case 'today':
+            tasksToNavigate = todayTasks;
+            break;
+        case 'tomorrow':
+            tasksToNavigate = tomorrowTasks;
+            break;
+        case 'pending':
+            tasksToNavigate = pendingTasks;
+            break;
+    }
+
     try {
         const locationsToVisit: string[] = [];
 
-        for (const task of actionableTasks) {
+        for (const task of tasksToNavigate) {
             if (task.store) {
                 locationsToVisit.push(task.store);
             } else {
@@ -814,24 +840,23 @@ export default function TasksPage() {
     }
 };
 
-  
-  const filteredTasks = tasks
-    .filter(task =>
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.store?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .filter(task => filterCategories.includes(task.category));
-
-  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'today' || task.status === 'missed' || task.status === 'tomorrow');
-  const todayTasks = filteredTasks.filter((task) => task.status === 'today');
-  const tomorrowTasks = filteredTasks.filter((task) => task.status === 'tomorrow');
-  
-  const actionableTaskCount = tasks.filter(t => t.status === 'pending' || t.status === 'today').length;
+  const getActionableTaskCount = () => {
+     switch (activeTab) {
+        case 'today':
+            return todayTasks.length;
+        case 'tomorrow':
+            return tomorrowTasks.length;
+        case 'pending':
+            return pendingTasks.length;
+        default:
+            return 0;
+     }
+  }
 
   return (
     <>
     <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 relative">
-      <Tabs defaultValue="pending">
+      <Tabs defaultValue="pending" onValueChange={setActiveTab}>
         <div className="flex items-center">
           <TabsList>
             <TabsTrigger value="today">Today</TabsTrigger>
@@ -839,7 +864,7 @@ export default function TasksPage() {
             <TabsTrigger value="pending">Pending</TabsTrigger>
           </TabsList>
           <div className="ml-auto flex items-center gap-2">
-            {actionableTaskCount >= 2 && (
+            {getActionableTaskCount() >= 2 && (
                 <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation} disabled={isNavigatingMultiple}>
                   {isNavigatingMultiple ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
