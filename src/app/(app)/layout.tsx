@@ -49,10 +49,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                            {appName.map((char, index) => (
                                 <span
                                     key={index}
-                                    className="inline-block transition-transform duration-500 ease-out"
+                                    className="inline-block"
                                     style={{
-                                        animation: isCollapsed ? 'none' : `fadeInUp 0.5s ${index * 0.05}s both`,
+                                        animation: isCollapsed ? 'none' : `fadeIn 1s ${index * 0.1}s both`,
                                         opacity: isCollapsed ? 0 : 1,
+                                        transition: 'opacity 0.3s'
                                     }}
                                 >
                                     {char === ' ' ? '\u00A0' : char}
