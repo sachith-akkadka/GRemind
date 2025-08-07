@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -36,6 +36,13 @@ const Routing = ({ origin, destination, waypoints }: MapProps) => {
     useEffect(() => {
         if (!map || !origin || !destination) return;
 
+        // Clear existing routes before adding a new one
+        // This is a common pattern to avoid multiple route lines on re-renders
+        let routingControl = (map as any)._routing;
+        if (routingControl) {
+            map.removeControl(routingControl);
+        }
+
         const allWaypoints = [
             L.latLng(Number(origin.split(',')[0]), Number(origin.split(',')[1])),
             ...(waypoints?.map(wp => {
@@ -45,7 +52,7 @@ const Routing = ({ origin, destination, waypoints }: MapProps) => {
             L.latLng(Number(destination.split(',')[0]), Number(destination.split(',')[1])),
         ];
 
-        const routingControl = L.Routing.control({
+        routingControl = L.Routing.control({
             waypoints: allWaypoints,
             routeWhileDragging: true,
             show: false, // Hides the itinerary text box
@@ -55,14 +62,22 @@ const Routing = ({ origin, destination, waypoints }: MapProps) => {
             },
             createMarker: function() { return null; } // Hides start/end markers from routing machine
         }).addTo(map);
+        
+        // Store the control instance on the map
+        (map as any)._routing = routingControl;
 
+        // The cleanup logic in leaflet-react is generally sufficient, 
+        // but explicit removal can help in complex HMR scenarios.
         return () => {
           try {
             if (map && routingControl) {
                 map.removeControl(routingControl);
+                (map as any)._routing = null;
             }
           } catch (e) {
-            console.log("Error removing routing control", e);
+            // This can sometimes throw an error if the map is already gone.
+            // It's safe to ignore.
+            console.log("Ignoring error during routing control removal", e);
           }
         }
     }, [map, origin, destination, waypoints]);
@@ -91,7 +106,7 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
 
     return (
         <MapContainer
-            key={JSON.stringify(mapCenter)}
+            key={Date.now()} // A more aggressive key to force remount
             center={mapCenter}
             zoom={13}
             style={mapContainerStyle}
