@@ -630,7 +630,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
   const [isNavigatingMultiple, setIsNavigatingMultiple] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState('pending');
+  const [activeTab, setActiveTab] = React.useState('today');
 
 
   React.useEffect(() => {
@@ -878,7 +878,7 @@ export default function TasksPage() {
   return (
     <>
       <div className="grid flex-1 items-start gap-4 md:gap-8 relative">
-        <Tabs defaultValue="pending" onValueChange={setActiveTab}>
+        <Tabs defaultValue="today" onValueChange={setActiveTab}>
           <div className="flex items-center">
             <TabsList>
               <TabsTrigger value="today">Today</TabsTrigger>
