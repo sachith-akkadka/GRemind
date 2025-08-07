@@ -50,3 +50,9 @@ const suggestLocationsFlow = ai.defineFlow(
 
     if (toolResult.places && toolResult.places.length > 0) {
       return { suggestions: toolResult.places };
+    }
+    
+    // If no places are found, return empty suggestions.
+    return { suggestions: [] };
+  }
+);

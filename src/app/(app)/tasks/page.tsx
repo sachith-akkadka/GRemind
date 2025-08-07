@@ -877,92 +877,98 @@ export default function TasksPage() {
 
   return (
     <>
-    <div className="grid flex-1 items-start gap-4 md:gap-8 relative">
-      <Tabs defaultValue="pending" onValueChange={setActiveTab}>
-        <div className="flex items-center">
-           <TabsList>
-            <TabsTrigger value="today">Today</TabsTrigger>
-            <TabsTrigger value="tomorrow">Tomorrow</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-          </TabsList>
-          <div className="ml-auto flex items-center gap-2">
-            {getActionableTaskCount() >= 1 && (
-                <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation} disabled={isNavigatingMultiple}>
-                  {isNavigatingMultiple ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    {isNavigatingMultiple ? 'Planning...' : 'Start'}
-                  </span>
-                </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1">
-                  <ListFilter className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Filter</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {categories.map(category => (
-                  <DropdownMenuCheckboxItem
-                    key={category.id}
-                    checked={filterCategories.includes(category.name)}
-                    onCheckedChange={(checked) => onFilterChange(category.name, checked)}
-                  >
-                    {category.name}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+      <div className="grid flex-1 items-start gap-4 md:gap-8 relative">
+        <Tabs defaultValue="pending" onValueChange={setActiveTab}>
+          <div className="flex items-center">
+            <TabsList>
+              <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="tomorrow">Tomorrow</TabsTrigger>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+            </TabsList>
+            <div className="ml-auto flex items-center gap-2">
+              {getActionableTaskCount() >= 1 && (
+                  <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleStartMultiStopNavigation} disabled={isNavigatingMultiple}>
+                    {isNavigatingMultiple ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                      {isNavigatingMultiple ? 'Planning...' : 'Start'}
+                    </span>
+                  </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1">
+                    <ListFilter className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Filter</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {categories.map(category => (
+                    <DropdownMenuCheckboxItem
+                      key={category.id}
+                      checked={filterCategories.includes(category.name)}
+                      onCheckedChange={(checked) => onFilterChange(category.name, checked)}
+                    >
+                      {category.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
-        <div className="relative mt-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search tasks or locations..." 
-              className="pl-8" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-        </div>
-        <TabsContent value="pending">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-            {pendingTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation} />
-            ))}
+          <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search tasks or locations..." 
+                className="pl-8" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
           </div>
-        </TabsContent>
-        <TabsContent value="today">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-            {todayTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="tomorrow">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-            {tomorrowTasks.map((task) => (
-              <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="pending">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+              {pendingTasks.map((task) => (
+                <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation} />
+              ))}
+            </div>
+          </TabsContent>
+          <TabsContent value="today">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+              {todayTasks.map((task) => (
+                <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
+              ))}
+            </div>
+          </TabsContent>
+          <TabsContent value="tomorrow">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+              {tomorrowTasks.map((task) => (
+                <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
 
-      <Button
-        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg"
-        onClick={handleNewTaskClick}
-      >
-        <Plus className="h-8 w-8" />
-        <span className="sr-only">New Task</span>
-      </Button>
+        <Button
+          className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg"
+          onClick={handleNewTaskClick}
+        >
+          <Plus className="h-8 w-8" />
+          <span className="sr-only">New Task</span>
+        </Button>
 
-    </div>
-     <NewTaskSheet 
+      </div>
+      <NewTaskSheet 
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         onTaskSubmit={handleTaskSubmit}
         editingTask={editingTask}
         userLocation={userLocation}
         userName={user?.displayName || null}
-        categories
+        categories={categories}
+      />
+    </>
+  );
+}
+
+    
