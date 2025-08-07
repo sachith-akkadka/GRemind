@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { signOut, updateProfile, deleteUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { writeBatch, collection, query, where, getDocs, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { writeBatch, collection, query, where, getDocs, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,11 +35,12 @@ export default function SettingsPage() {
     const [displayName, setDisplayName] = useState(user?.displayName || '');
     const [bio, setBio] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isSavingPrefs, setIsSavingPrefs] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
     
     // New states for settings
     const [emailNotifications, setEmailNotifications] = useState(true);
-    const [defaultReminder, setDefaultReminder] = useState('15');
+    const [defaultReminder, setDefaultReminder] = useState('10'); // Default to 10 minutes
     const [defaultCategory, setDefaultCategory] = useState('Personal');
     const [aiReschedule, setAiReschedule] = useState(true);
     const [weeklyReport, setWeeklyReport] = useState(false);
@@ -46,10 +48,11 @@ export default function SettingsPage() {
     
     useEffect(() => {
         if (!user) return;
-        const q = query(collection(db, 'users', user.uid, 'categories'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        
+        // Fetch user categories
+        const catQuery = query(collection(db, 'users', user.uid, 'categories'));
+        const unsubscribeCategories = onSnapshot(catQuery, (snapshot) => {
             if (snapshot.empty) {
-                // Seed default categories if none exist
                 const defaultCategories = [
                   { id: 'cat1', name: 'Groceries' },
                   { id: 'cat2', name: 'Work' },
@@ -67,7 +70,25 @@ export default function SettingsPage() {
                 setCategories(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
             }
         });
-        return () => unsubscribe();
+
+        // Fetch user preferences
+        const userPrefsRef = doc(db, 'users', user.uid, 'preferences', 'settings');
+        const unsubscribePrefs = onSnapshot(userPrefsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const prefs = docSnap.data();
+                setDefaultReminder(prefs.defaultReminder || '10');
+                setDefaultCategory(prefs.defaultCategory || 'Personal');
+                setTaskSort(prefs.taskSort || 'dueDate');
+                setEmailNotifications(prefs.emailNotifications !== false);
+                setAiReschedule(prefs.aiReschedule !== false);
+                setWeeklyReport(prefs.weeklyReport === true);
+            }
+        });
+
+        return () => {
+            unsubscribeCategories();
+            unsubscribePrefs();
+        };
     }, [user]);
 
 
@@ -79,6 +100,27 @@ export default function SettingsPage() {
         }
         return name.substring(0, 2).toUpperCase();
     }
+
+     const handleSavePreferences = async () => {
+        if (!user) return;
+        setIsSavingPrefs(true);
+        try {
+            const prefsRef = doc(db, 'users', user.uid, 'preferences', 'settings');
+            await setDoc(prefsRef, {
+                defaultReminder,
+                defaultCategory,
+                taskSort,
+                emailNotifications,
+                aiReschedule,
+                weeklyReport
+            }, { merge: true });
+            toast({ title: "Preferences Saved", description: "Your settings have been updated." });
+        } catch (error) {
+            toast({ title: "Error Saving Preferences", variant: "destructive" });
+        } finally {
+            setIsSavingPrefs(false);
+        }
+    };
     
     const handleClearHistory = async () => {
         if (!user) return;
@@ -134,22 +176,21 @@ export default function SettingsPage() {
         if (!currentUser) return;
         
         try {
-            // Delete all data associated with the user
             const batch = writeBatch(db);
             
-            // Delete tasks
             const tasksQuery = query(collection(db, 'tasks'), where('userId', '==', currentUser.uid));
             const tasksSnapshot = await getDocs(tasksQuery);
             tasksSnapshot.forEach((doc) => batch.delete(doc.ref));
 
-            // Delete categories
             const categoriesQuery = query(collection(db, 'users', currentUser.uid, 'categories'));
             const categoriesSnapshot = await getDocs(categoriesQuery);
             categoriesSnapshot.forEach((doc) => batch.delete(doc.ref));
+
+            const prefsRef = doc(db, 'users', currentUser.uid, 'preferences', 'settings');
+            batch.delete(prefsRef);
             
             await batch.commit();
             
-            // Delete the user from authentication
             await deleteUser(currentUser);
             
             toast({ title: "Account Deleted", description: "Your account and all associated data have been permanently deleted." });
@@ -191,24 +232,20 @@ export default function SettingsPage() {
             return;
         }
 
-        // No changes to save
         if (displayName === currentUser.displayName) return;
 
         setIsSaving(true);
         try {
             await updateProfile(currentUser, { displayName });
             
-            // This is the key part: update the user object in the auth context
-            // so the change is reflected immediately across the app.
             if (setUser) {
-              const updatedUser = { ...currentUser, displayName, photoURL: currentUser.photoURL }; // Keep existing photoURL
+              const updatedUser = { ...currentUser, displayName, photoURL: currentUser.photoURL };
               setUser(updatedUser);
             }
 
             toast({ title: "Profile updated successfully!" });
         } catch(error: any) {
             let description = "Could not update your profile.";
-            // Check for specific Firebase error code for sensitive actions
             if (error.code === 'auth/requires-recent-login') {
                 description = "This action requires a recent sign-in. Please log out and log back in to update your profile.";
             } else {
@@ -306,6 +343,11 @@ export default function SettingsPage() {
             </Select>
           </div>
         </CardContent>
+         <CardFooter className="border-t px-6 py-4">
+            <Button onClick={handleSavePreferences} disabled={isSavingPrefs}>
+                {isSavingPrefs ? 'Saving...' : 'Save Preferences'}
+            </Button>
+        </CardFooter>
       </Card>
 
       <Card>
@@ -336,6 +378,7 @@ export default function SettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="5">5 minutes before</SelectItem>
+                    <SelectItem value="10">10 minutes before</SelectItem>
                     <SelectItem value="15">15 minutes before</SelectItem>
                     <SelectItem value="30">30 minutes before</SelectItem>
                     <SelectItem value="60">1 hour before</SelectItem>
@@ -354,6 +397,11 @@ export default function SettingsPage() {
             />
           </div>
         </CardContent>
+         <CardFooter className="border-t px-6 py-4">
+            <Button onClick={handleSavePreferences} disabled={isSavingPrefs}>
+                {isSavingPrefs ? 'Saving...' : 'Save Preferences'}
+            </Button>
+        </CardFooter>
       </Card>
 
       <Card>
@@ -374,6 +422,11 @@ export default function SettingsPage() {
             />
           </div>
         </CardContent>
+        <CardFooter className="border-t px-6 py-4">
+            <Button onClick={handleSavePreferences} disabled={isSavingPrefs}>
+                {isSavingPrefs ? 'Saving...' : 'Save Preferences'}
+            </Button>
+        </CardFooter>
       </Card>
       
       <Card>

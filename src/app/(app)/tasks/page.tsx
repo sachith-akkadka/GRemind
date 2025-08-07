@@ -13,6 +13,7 @@ import {
   doc,
   Timestamp,
   writeBatch,
+  getDoc,
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
@@ -641,6 +642,7 @@ export default function TasksPage() {
   const router = useRouter();
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
+  const [userPreferences, setUserPreferences] = React.useState({ defaultReminder: '10' });
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filterCategories, setFilterCategories] = React.useState<string[]>([]);
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -649,6 +651,7 @@ export default function TasksPage() {
   const [isNavigatingMultiple, setIsNavigatingMultiple] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('today');
   const notifiedTasksRef = React.useRef(new Set());
+  const visitedLocationsRef = React.useRef(new Set());
 
 
   React.useEffect(() => {
@@ -662,7 +665,7 @@ export default function TasksPage() {
     });
 
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation(`${latitude},${longitude}`);
@@ -675,7 +678,8 @@ export default function TasksPage() {
             variant: "destructive"
            })
            setUserLocation("12.9716,77.5946"); // Default to Bangalore as a fallback
-        }
+        },
+        { enableHighAccuracy: true }
       );
     } else {
         setUserLocation("12.9716,77.5946");
@@ -685,12 +689,23 @@ export default function TasksPage() {
   React.useEffect(() => {
     if (!user) return;
     const q = query(collection(db, 'users', user.uid, 'categories'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeCats = onSnapshot(q, (snapshot) => {
         const userCategories = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
         setCategories(userCategories);
         setFilterCategories(userCategories.map(c => c.name));
     });
-    return () => unsubscribe();
+
+    const prefsRef = doc(db, 'users', user.uid, 'preferences', 'settings');
+    const unsubscribePrefs = onSnapshot(prefsRef, (doc) => {
+        if (doc.exists()) {
+            setUserPreferences(doc.data() as any);
+        }
+    });
+
+    return () => {
+        unsubscribeCats();
+        unsubscribePrefs();
+    }
   }, [user]);
 
 
@@ -706,7 +721,8 @@ export default function TasksPage() {
       const batch = writeBatch(db);
       const today = startOfDay(new Date());
       let shouldUpdate = false;
-      const notificationDelay = 10 * 60 * 1000; // 10 minutes
+      const reminderMinutes = parseInt(userPreferences.defaultReminder, 10);
+      const notificationDelay = reminderMinutes * 60 * 1000;
 
       querySnapshot.forEach((taskDoc) => {
         const data = taskDoc.data() as FirestoreTask;
@@ -717,7 +733,6 @@ export default function TasksPage() {
             completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
         } as Task;
 
-        // --- Notification & Status Logic ---
         if (task.status !== 'completed') {
             const taskDueDate = parseISO(task.dueDate);
             const timeUntilDue = taskDueDate.getTime() - new Date().getTime();
@@ -726,28 +741,49 @@ export default function TasksPage() {
             if (timeUntilDue > 0 && timeUntilDue < notificationDelay && !notifiedTasksRef.current.has(task.id + '_time')) {
                 scheduleNotification(
                     `Reminder: ${task.title}`,
-                    { body: `This task is due at ${format(taskDueDate, 'p')}.`, tag: task.id },
+                    { body: `Due in ${reminderMinutes} minutes at ${format(taskDueDate, 'p')}.`, tag: task.id + '_time' },
                     timeUntilDue - notificationDelay
                 );
                 notifiedTasksRef.current.add(task.id + '_time');
             }
             
-            // 2. Location-based notification (Simulated)
-            if (task.store && userLocation && !notifiedTasksRef.current.has(task.id + '_loc')) {
+            // 2. Location-based notification logic
+            if (task.store && userLocation) {
                 const [taskLat, taskLon] = task.store.split(',').map(Number);
                 const [userLat, userLon] = userLocation.split(',').map(Number);
                 const distance = getDistance(userLat, userLon, taskLat, taskLon);
-                if (distance <= 100) { // 100 meters
+
+                // Arrival Notification
+                if (distance <= 100 && !notifiedTasksRef.current.has(task.id + '_arrival')) {
                      showNotification(
                         `Nearby Task: ${task.title}`,
-                        { body: `You can do this at ${task.storeName || 'the destination'} just 100m away!`, tag: task.id }
+                        { body: `You can do this at ${task.storeName || 'the destination'} just 100m away!`, tag: task.id + '_arrival' }
                      );
-                     notifiedTasksRef.current.add(task.id + '_loc');
+                     notifiedTasksRef.current.add(task.id + '_arrival');
+                     visitedLocationsRef.current.add(task.id);
+                }
+
+                // Departure Notification
+                if (distance > 100 && visitedLocationsRef.current.has(task.id) && !notifiedTasksRef.current.has(task.id + '_departure')) {
+                    showNotification(
+                        `Did you finish?`,
+                        { 
+                            body: `Did you complete "${task.title}" at ${task.storeName || 'the last location'}?`,
+                            tag: task.id + '_departure',
+                            requireInteraction: true,
+                            actions: [{ action: 'yes', title: 'Yes' }, { action: 'no', title: 'Not Yet' }]
+                        }
+                    );
+                    // This is for demonstration. Real actions require a service worker.
+                    // For now, we'll assume 'Yes' if the notification is clicked.
+                    const taskRef = doc(db, 'tasks', task.id);
+                    updateDoc(taskRef, { status: 'completed', completedAt: Timestamp.now() });
+
+                    notifiedTasksRef.current.add(task.id + '_departure');
+                    visitedLocationsRef.current.delete(task.id); // Reset for next time
                 }
             }
 
-
-            // 3. Status update logic
             let newStatus: Task['status'] = 'pending';
             if (isToday(taskDueDate)) {
                 newStatus = 'today';
@@ -775,7 +811,7 @@ export default function TasksPage() {
     });
 
     return () => unsubscribe();
-  }, [user, userLocation]);
+  }, [user, userLocation, userPreferences]);
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
@@ -848,7 +884,7 @@ export default function TasksPage() {
     )
     .filter(task => filterCategories.includes(task.category));
 
-  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'missed' || task.status === 'tomorrow');
+  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'missed');
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
   const tomorrowTasks = filteredTasks.filter((task) => task.status === 'tomorrow');
 
@@ -931,16 +967,16 @@ export default function TasksPage() {
      }
   }
 
-  const NoTasksMessage = ({ message }: { message: string }) => (
+  const NoTasksMessage = ({ tabName }: { tabName: string }) => (
     <div className="text-center py-12">
-        <p className="text-muted-foreground">{message}</p>
+        <p className="text-muted-foreground">No tasks for {tabName}.</p>
     </div>
   );
 
   return (
     <>
       <div className="grid flex-1 items-start gap-4 md:gap-8 relative">
-        <Tabs defaultValue="today" onValueChange={setActiveTab}>
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
           <div className="flex items-center">
             <TabsList>
               <TabsTrigger value="today">Today</TabsTrigger>
@@ -996,7 +1032,7 @@ export default function TasksPage() {
                   ))}
                 </div>
              ) : (
-                <NoTasksMessage message="No pending tasks." />
+                <NoTasksMessage tabName="pending" />
              )}
           </TabsContent>
           <TabsContent value="today">
@@ -1007,7 +1043,7 @@ export default function TasksPage() {
                 ))}
               </div>
             ) : (
-                <NoTasksMessage message="No tasks for today." />
+                <NoTasksMessage tabName="today" />
             )}
           </TabsContent>
           <TabsContent value="tomorrow">
@@ -1018,7 +1054,7 @@ export default function TasksPage() {
                 ))}
                 </div>
             ) : (
-                <NoTasksMessage message="No tasks for tomorrow." />
+                <NoTasksMessage tabName="tomorrow" />
             )}
           </TabsContent>
         </Tabs>
@@ -1044,3 +1080,5 @@ export default function TasksPage() {
     </>
   );
 }
+
+    
