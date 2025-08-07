@@ -6,6 +6,10 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     console.warn('This browser does not support desktop notification');
     return false;
   }
+   if (!('serviceWorker' in navigator)) {
+    console.warn('Service workers are not supported in this browser.');
+    return false;
+  }
 
   if (Notification.permission === 'granted') {
     return true;
@@ -21,18 +25,16 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   return false;
 };
 
-export const scheduleNotification = (title: string, options: NotificationOptions, delay: number) => {
-    if (delay < 0) return; // Don't schedule for past events
-
-    setTimeout(() => {
-        if (Notification.permission === 'granted') {
-            new Notification(title, options);
-        }
-    }, delay);
-};
-
-export const showNotification = (title: string, options: NotificationOptions) => {
-    if (Notification.permission === 'granted') {
-        new Notification(title, options);
+// This function now uses the service worker to show notifications
+export const showNotification = async (title: string, options: NotificationOptions) => {
+    if (Notification.permission !== 'granted' || !('serviceWorker' in navigator)) {
+        return;
+    }
+    
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        registration.showNotification(title, options);
+    } catch (e) {
+        console.error('Error showing notification', e);
     }
 }

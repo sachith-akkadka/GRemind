@@ -73,6 +73,7 @@ import { useToast } from '@/hooks/use-toast';
 import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
 import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
 import { findTaskLocation } from '@/ai/flows/find-task-location';
+import { findNextLocationAndRoute } from '@/ai/flows/find-next-location-and-route';
 import {
   Select,
   SelectContent,
@@ -83,7 +84,7 @@ import {
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { requestNotificationPermission, scheduleNotification, showNotification } from '@/lib/notifications';
+import { requestNotificationPermission, showNotification } from '@/lib/notifications';
 
 // Haversine formula to calculate distance between two lat/lon points
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -650,12 +651,61 @@ export default function TasksPage() {
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
   const [isNavigatingMultiple, setIsNavigatingMultiple] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('today');
-  const notifiedTasksRef = React.useRef(new Set());
-  const visitedLocationsRef = React.useRef(new Set());
+  const notifiedTasksRef = React.useRef(new Set<string>());
+  const visitedLocationsRef = React.useRef(new Set<string>());
 
+
+  // Handle notification clicks
+  React.useEffect(() => {
+    const handleNotificationClick = async (event: any) => {
+        event.preventDefault();
+        event.notification.close();
+
+        const task = tasks.find(t => t.id === event.notification.tag);
+        if (!task || !task.store || !userLocation) return;
+        
+        if (event.action === 'yes') {
+            handleUpdateTask(task.id, { status: 'completed', completedAt: Timestamp.now() });
+            toast({ title: 'Task Completed', description: `"${task.title}" marked as done.`});
+        } else if (event.action === 'no') {
+            toast({ title: 'Re-routing...', description: `Finding a new location for "${task.title}".`});
+            
+            const remainingTasks = tasks.filter(t => t.id !== task.id && t.status !== 'completed' && t.store);
+            const remainingDestinations = remainingTasks.map(t => t.store!);
+
+            const result = await findNextLocationAndRoute({
+                taskTitle: task.title,
+                userLocation: userLocation,
+                locationToExclude: task.store,
+                remainingDestinations: remainingDestinations
+            });
+
+            if (result.newLocation) {
+                 await handleUpdateTask(task.id, { store: result.newLocation.address, storeName: result.newLocation.name });
+                 toast({ title: 'New Location Found!', description: `Headed to ${result.newLocation.name}.`});
+            } else {
+                toast({ title: 'No other locations found', variant: 'destructive'});
+            }
+
+            // Re-route to map
+            const params = new URLSearchParams();
+            params.set('origin', userLocation);
+            if(result.newDestination) {
+                params.set('destination', result.newDestination);
+            }
+            result.newWaypoints.forEach(wp => params.append('waypoints', wp));
+            router.push(`/map?${params.toString()}`);
+        }
+    };
+    
+    navigator.serviceWorker.addEventListener('notificationclick', handleNotificationClick);
+
+    return () => {
+        navigator.serviceWorker.removeEventListener('notificationclick', handleNotificationClick);
+    };
+  }, [tasks, userLocation]); // Rerun when tasks or location change
 
   React.useEffect(() => {
-    // Request notification permission on component mount
     requestNotificationPermission().then(granted => {
         if (granted) {
             toast({ title: "Notifications enabled!", description: "You'll receive reminders for your tasks." });
@@ -710,7 +760,7 @@ export default function TasksPage() {
 
 
   React.useEffect(() => {
-    if (!user) {
+    if (!user || !userLocation) {
       setTasks([]);
       return;
     };
@@ -721,8 +771,8 @@ export default function TasksPage() {
       const batch = writeBatch(db);
       const today = startOfDay(new Date());
       let shouldUpdate = false;
+      
       const reminderMinutes = parseInt(userPreferences.defaultReminder, 10);
-      const notificationDelay = reminderMinutes * 60 * 1000;
 
       querySnapshot.forEach((taskDoc) => {
         const data = taskDoc.data() as FirestoreTask;
@@ -735,14 +785,19 @@ export default function TasksPage() {
 
         if (task.status !== 'completed') {
             const taskDueDate = parseISO(task.dueDate);
-            const timeUntilDue = taskDueDate.getTime() - new Date().getTime();
-
+            const now = new Date();
+            
             // 1. Time-based notification
-            if (timeUntilDue > 0 && timeUntilDue < notificationDelay && !notifiedTasksRef.current.has(task.id + '_time')) {
-                scheduleNotification(
+            const timeUntilDue = taskDueDate.getTime() - now.getTime();
+            const reminderTime = reminderMinutes * 60 * 1000;
+            if (timeUntilDue > 0 && timeUntilDue < reminderTime && !notifiedTasksRef.current.has(task.id + '_time')) {
+                showNotification(
                     `Reminder: ${task.title}`,
-                    { body: `Due in ${reminderMinutes} minutes at ${format(taskDueDate, 'p')}.`, tag: task.id + '_time' },
-                    timeUntilDue
+                    { 
+                        body: `Due in ${reminderMinutes} minutes at ${format(taskDueDate, 'p')}.`, 
+                        tag: task.id + '_time',
+                        data: { taskId: task.id, type: 'time' },
+                    },
                 );
                 notifiedTasksRef.current.add(task.id + '_time');
             }
@@ -757,7 +812,11 @@ export default function TasksPage() {
                 if (distance <= 100 && !notifiedTasksRef.current.has(task.id + '_arrival')) {
                      showNotification(
                         `Nearby Task: ${task.title}`,
-                        { body: `You can do this at ${task.storeName || 'the destination'} just 100m away!`, tag: task.id + '_arrival' }
+                        { 
+                            body: `You can do this at ${task.storeName || 'the destination'} just 100m away!`, 
+                            tag: task.id, // Use task.id as tag for departure logic
+                            data: { taskId: task.id, type: 'arrival' }
+                        }
                      );
                      notifiedTasksRef.current.add(task.id + '_arrival');
                      visitedLocationsRef.current.add(task.id);
@@ -769,19 +828,13 @@ export default function TasksPage() {
                         `Did you finish?`,
                         { 
                             body: `Did you complete "${task.title}" at ${task.storeName || 'the last location'}?`,
-                            tag: task.id + '_departure',
+                            tag: task.id, // Use task.id to link to click handler
                             requireInteraction: true,
                             actions: [{ action: 'yes', title: 'Yes' }, { action: 'no', title: 'Not Yet' }]
                         }
                     );
-                    // This is for demonstration. Real actions require a service worker.
-                    // For now, we'll assume 'Yes' if the notification is clicked.
-                    // A more robust solution would listen for notification clicks.
-                    const taskRef = doc(db, 'tasks', task.id);
-                    updateDoc(taskRef, { status: 'completed', completedAt: Timestamp.now() });
-
                     notifiedTasksRef.current.add(task.id + '_departure');
-                    visitedLocationsRef.current.delete(task.id); // Reset for next time
+                    visitedLocationsRef.current.delete(task.id); 
                 }
             }
 
@@ -1081,5 +1134,3 @@ export default function TasksPage() {
     </>
   );
 }
-
-    

@@ -9,13 +9,14 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { findNearbyPlacesTool } from '../tools/location-tools';
 
 
 const FindTaskLocationInputSchema = z.object({
   taskTitle: z.string().describe("The title of the task, e.g., 'Buy groceries'."),
   userLocation: z.string().describe("The user's current location as a latitude,longitude pair."),
+  locationsToExclude: z.array(z.string()).optional().describe("A list of location addresses (lat,lon strings) to exclude from the search results."),
 });
 
 export type FindTaskLocationInput = z.infer<typeof FindTaskLocationInputSchema>;
@@ -44,9 +45,13 @@ const findTaskLocationFlow = ai.defineFlow(
     // This mirrors the logic in `suggest-locations` which is known to work.
     const toolResult = await findNearbyPlacesTool({ query: input.taskTitle, userLocation: input.userLocation });
 
+    const filteredPlaces = toolResult.places?.filter(place => 
+      !input.locationsToExclude?.includes(place.address)
+    );
+
     // If the tool returns any places, we return the first one, which is the most relevant/closest.
-    if (toolResult.places && toolResult.places.length > 0) {
-      return toolResult.places[0];
+    if (filteredPlaces && filteredPlaces.length > 0) {
+      return filteredPlaces[0];
     }
     
     // If no places are found, return null.
