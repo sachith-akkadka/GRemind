@@ -91,6 +91,7 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
 
     return (
         <MapContainer
+            key={JSON.stringify(mapCenter)}
             center={mapCenter}
             zoom={13}
             style={mapContainerStyle}
