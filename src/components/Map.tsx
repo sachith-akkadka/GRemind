@@ -1,11 +1,25 @@
 
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
-import { GoogleMap, LoadScript, Marker, DirectionsService, DirectionsRenderer } from "@react-google-maps/api";
-import { firebaseConfig } from "@/lib/firebase";
+import React, { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import "leaflet-routing-machine";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 
-const containerStyle = {
+
+// Fix for default icon issues with webpack
+// @ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+
+
+const mapContainerStyle = {
   width: "100%",
   height: "100%",
 };
@@ -16,63 +30,80 @@ interface MapProps {
     waypoints?: { location: string }[] | null;
 }
 
+const Routing = ({ origin, destination, waypoints }: MapProps) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!map || !origin || !destination) return;
+
+        const allWaypoints = [
+            L.latLng(Number(origin.split(',')[0]), Number(origin.split(',')[1])),
+            ...(waypoints?.map(wp => {
+                const [lat, lon] = wp.location.split(',').map(Number);
+                return L.latLng(lat, lon);
+            }) || []),
+            L.latLng(Number(destination.split(',')[0]), Number(destination.split(',')[1])),
+        ];
+
+        const routingControl = L.Routing.control({
+            waypoints: allWaypoints,
+            routeWhileDragging: true,
+            show: false, // Hides the itinerary text box
+            addWaypoints: false,
+             lineOptions: {
+                styles: [{ color: 'hsl(var(--primary))', opacity: 1, weight: 5 }]
+            },
+            createMarker: function() { return null; } // Hides start/end markers from routing machine
+        }).addTo(map);
+
+        return () => {
+          try {
+            if (map && routingControl) {
+                map.removeControl(routingControl);
+            }
+          } catch (e) {
+            console.log("Error removing routing control", e);
+          }
+        }
+    }, [map, origin, destination, waypoints]);
+
+    return null;
+}
+
+
 const Map = ({ origin, destination, waypoints }: MapProps) => {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Default center
+    const [mapCenter, setMapCenter] = useState<[number, number]>([19.0760, 72.8777]); // Default center
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-            setMapCenter({
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
+    useEffect(() => {
+        if (origin) {
+            const [lat, lng] = origin.split(',').map(Number);
+            setMapCenter([lat, lng]);
+        } else if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                setMapCenter([position.coords.latitude, position.coords.longitude]);
             });
-        });
-    }
-  }, [])
+        }
+    }, [origin])
+    
+    // Create markers for origin and destination if they exist
+    const originCoords = origin ? origin.split(',').map(Number) as [number, number] : null;
+    const destinationCoords = destination ? destination.split(',').map(Number) as [number, number] : null;
 
-
-  const directionsCallback = useCallback((
-    response: google.maps.DirectionsResult | null,
-    status: google.maps.DirectionsStatus
-  ) => {
-    if (status === "OK" && response) {
-      setDirections(response);
-    } else {
-      console.error(`Directions request failed due to ${status}`);
-    }
-  }, []);
-
-  if (!apiKey) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-muted rounded-lg p-4 text-center">
-        <h3 className="text-lg font-semibold text-foreground">Map Not Configured</h3>
-        <p className="text-sm text-muted-foreground mt-2">
-          To use the map features, please provide a Google Maps API key. Follow the instructions to create a key and add it to your project's `.env.local` file.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <LoadScript googleMapsApiKey={apiKey}>
-      <GoogleMap mapContainerStyle={containerStyle} center={mapCenter} zoom={13}>
-        {!destination && <Marker position={mapCenter} />}
-        {destination && origin && (
-          <DirectionsService
-            options={{
-              origin: origin,
-              destination: destination,
-              travelMode: google.maps.TravelMode.DRIVING,
-            }}
-            callback={directionsCallback}
-          />
-        )}
-        {directions && <DirectionsRenderer options={{ directions }} />}
-      </GoogleMap>
-    </LoadScript>
-  );
-};
-
-export default Map;
+        <MapContainer
+            center={mapCenter}
+            zoom={13}
+            style={mapContainerStyle}
+            scrollWheelZoom={true}
+        >
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+             {originCoords && <Marker position={originCoords}></Marker>}
+             {destinationCoords && <Marker position={destinationCoords}></Marker>}
+             {waypoints?.map((wp, index) => {
+                const [lat, lon] = wp.location.split(',').map(Number);
+                return <Marker key={index} position={[lat, lon]}></Marker>
+             })}
+            {origin && destination && <Routing origin={origin} destination={destination} waypoints={waypoints} />}

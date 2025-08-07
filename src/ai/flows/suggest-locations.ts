@@ -15,7 +15,7 @@ import { findNearbyPlacesTool } from '../tools/location-tools';
 
 const SuggestLocationsInputSchema = z.object({
   query: z.string().describe("The user's partial location input."),
-  userLocation: z.string().describe("The user's current location as a string, e.g., 'Mountain View, CA' or a latitude,longitude pair."),
+  userLocation: z.string().describe("The user's current location as a latitude,longitude pair."),
 });
 
 export type SuggestLocationsInput = z.infer<typeof SuggestLocationsInputSchema>;
@@ -50,8 +50,3 @@ const suggestLocationsFlow = ai.defineFlow(
 
     if (toolResult.places && toolResult.places.length > 0) {
       return { suggestions: toolResult.places };
-    }
-    
-    return { suggestions: [] };
-  }
-);

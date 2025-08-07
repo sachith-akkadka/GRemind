@@ -9,7 +9,8 @@ export interface Task {
   dueDate: string; // Storing as ISO string
   completedAt?: string; // Storing as ISO string
   category: string;
-  store?: string;
+  store?: string; // This will store the lat,lon string
+  storeName?: string; // This will store the readable name of the location
   subtasks?: Subtask[];
   recurring?: 'daily' | 'weekly';
   userId: string;
@@ -24,6 +25,7 @@ export interface FirestoreTask {
   completedAt?: Timestamp;
   category: string;
   store?: string;
+  storeName?: string;
   subtasks?: Subtask[];
   recurring?: 'daily' | 'weekly';
   userId: string;
@@ -44,6 +46,3 @@ export interface Category {
 
 export interface User {
   name: string;
-  email: string;
-  avatarUrl?: string;
-}

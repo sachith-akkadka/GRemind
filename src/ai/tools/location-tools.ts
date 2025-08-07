@@ -21,7 +21,7 @@ const NearbyPlacesInputSchema = z.object({
   userLocation: z
     .string()
     .describe(
-      "The user's current location, as an address or landmark (e.g., 'Mountain View, CA')."
+      "The user's current location, as a latitude,longitude pair (e.g., '12.9716,77.5946')."
     ),
 });
 
@@ -30,7 +30,7 @@ const NearbyPlacesOutputSchema = z.object({
   places: z.array(
     z.object({
       name: z.string().describe('The name of the business or landmark.'),
-      address: z.string().describe('The full address of the location.'),
+      address: z.string().describe('The latitude,longitude pair of the location.'),
       eta: z
         .string()
         .describe('The estimated time of arrival (e.g., "5 mins", "12 mins").'),
@@ -53,18 +53,18 @@ export const findNearbyPlacesTool = ai.defineTool(
     // plausible, realistic-looking data based on the query.
 
     const { output } = await ai.generate({
-      prompt: `You are a simulated Maps API. Based on the search query "${input.query}" near "${input.userLocation}", generate a list of 3 to 5 plausible, real-world business names with realistic-looking street addresses and estimated travel times (ETAs).
+      prompt: `You are a simulated Maps API. Based on the search query "${input.query}" for the location represented by the lat/lon pair "${input.userLocation}", generate a list of 3 to 5 plausible, real-world business names with realistic-looking latitude,longitude addresses and estimated travel times (ETAs).
 
-      VERY IMPORTANT: The results MUST be located within the city or area of "${input.userLocation}". Do NOT include results from other cities, even if they are nearby. For example, if the location is "Puttur", only provide results in Puttur, not Mangalore.
+      VERY IMPORTANT: The address for each result MUST be a valid latitude,longitude pair. The results should be plausibly near the user's location.
 
       The results MUST be sorted by proximity, from the closest location to the farthest. The ETAs should reflect this, starting with shorter times (e.g., "5 mins", "8 mins") and increasing for subsequent results (e.g., "15 mins", "20 mins").
 
-      For example, if the query is "coffee shop" near "Palo Alto, CA", a good response would be a JSON object like:
+      For example, if the query is "coffee shop" near "12.9716,77.5946", a good response would be a JSON object like:
       {
         "places": [
-          { "name": "Philz Coffee", "address": "101 Forest Ave, Palo Alto, CA 94301", "eta": "6 mins" },
-          { "name": "Verve Coffee Roasters", "address": "162 University Ave, Palo Alto, CA 94301", "eta": "9 mins" },
-          { "name": "Blue Bottle Coffee", "address": "456 University Ave, Palo Alto, CA 94301", "eta": "14 mins" }
+          { "name": "Starbucks", "address": "12.9720,77.5950", "eta": "6 mins" },
+          { "name": "Third Wave Coffee", "address": "12.9700,77.5980", "eta": "9 mins" },
+          { "name": "Blue Tokai Coffee", "address": "12.9695,77.6001", "eta": "14 mins" }
         ]
       }
 

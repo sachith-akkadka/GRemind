@@ -119,8 +119,9 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         try {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
-                destination = `${locationResult.name}, ${locationResult.address}`;
-                onUpdateTask(task.id, { store: destination });
+                // The address from the tool is now a lat,lon string
+                destination = `${locationResult.address}`; 
+                onUpdateTask(task.id, { store: destination, storeName: locationResult.name });
             } else {
                  toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive" });
                  setIsNavigating(false);
@@ -141,6 +142,8 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
 
     setIsNavigating(false);
   };
+  
+  const displayLocation = task.storeName || task.store;
 
   return (
     <Card>
@@ -179,7 +182,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground space-y-1">
            <p className="flex items-center gap-2"><Clock className="w-4 h-4"/> Due: {format(parseISO(task.dueDate), "PPP, p")}</p>
-           {task.store && <p className="flex items-center gap-2"><MapPin className="w-4 h-4"/> {task.store}</p>}
+           {displayLocation && <p className="flex items-center gap-2"><MapPin className="w-4 h-4"/> {displayLocation}</p>}
         </div>
         {task.subtasks && task.subtasks.length > 0 && (
           <div className="flex flex-col gap-2">
@@ -244,6 +247,7 @@ function NewTaskSheet({
   const [category, setCategory] = React.useState('Personal');
 
   const [location, setLocation] = React.useState('');
+  const [locationName, setLocationName] = React.useState('');
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
   const [isSuggestingLocations, setIsSuggestingLocations] = React.useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = React.useState(true);
@@ -253,7 +257,7 @@ function NewTaskSheet({
   const [showTaskSuggestions, setShowTaskSuggestions] = React.useState(true);
 
   const [debouncedTitle] = useDebounce(title, 300);
-  const [debouncedLocation] = useDebounce(location, 300);
+  const [debouncedLocation] = useDebounce(locationName, 300);
 
 
   React.useEffect(() => {
@@ -270,6 +274,7 @@ function NewTaskSheet({
         setMinute(formattedMinute);
         setAmpm(formattedAmPm.toUpperCase());
         setLocation(editingTask.store || '');
+        setLocationName(editingTask.storeName || '');
         setCategory(editingTask.category);
       } else {
         setTitle('');
@@ -280,6 +285,7 @@ function NewTaskSheet({
         setMinute('00');
         setAmpm(format(now, 'aa').toUpperCase());
         setLocation('');
+        setLocationName('');
         setCategory('Personal');
       }
       setLocationSuggestions([]);
@@ -393,6 +399,7 @@ function NewTaskSheet({
       description,
       dueDate: Timestamp.fromDate(combinedDueDate),
       store: location,
+      storeName: locationName,
       status: editingTask
         ? newStatus
         : newStatus,
@@ -557,9 +564,9 @@ function NewTaskSheet({
                 <Input
                   id="location"
                   placeholder="e.g., Downtown Mall"
-                  value={location}
+                  value={locationName}
                   onChange={(e) => {
-                    setLocation(e.target.value);
+                    setLocationName(e.target.value);
                     if (!showLocationSuggestions) setShowLocationSuggestions(true);
                   }}
                   onFocus={handleLocationFocus}
@@ -579,9 +586,8 @@ function NewTaskSheet({
                       key={index}
                       className="p-3 hover:bg-muted cursor-pointer border-b"
                       onClick={() => {
-                        setLocation(
-                          `${suggestion.name}, ${suggestion.address}`
-                        );
+                        setLocation(suggestion.address); // The lat,lon string
+                        setLocationName(suggestion.name); // The readable name
                         setShowLocationSuggestions(false);
                       }}
                     >
@@ -638,14 +644,14 @@ export default function TasksPage() {
           console.error("Error getting user location:", error);
            toast({
             title: "Could not get location",
-            description: "Location suggestions may not be accurate. Using a default location.",
+            description: "Using a default location. Location suggestions may not be accurate.",
             variant: "destructive"
            })
-           setUserLocation("Mountain View, CA");
+           setUserLocation("12.9716,77.5946"); // Default to Bangalore as a fallback
         }
       );
     } else {
-        setUserLocation("Mountain View, CA");
+        setUserLocation("12.9716,77.5946");
     }
   }, [toast]);
   
@@ -676,8 +682,15 @@ export default function TasksPage() {
 
       querySnapshot.forEach((taskDoc) => {
         const data = taskDoc.data() as FirestoreTask;
-        if (data.status !== 'completed') {
-            const taskDueDate = (data.dueDate as Timestamp).toDate();
+        const task = {
+             id: taskDoc.id,
+            ...data,
+            dueDate: (data.dueDate as Timestamp)?.toDate().toISOString(),
+            completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
+        } as Task;
+
+        if (task.status !== 'completed') {
+            const taskDueDate = parseISO(task.dueDate);
             let newStatus: Task['status'] = 'pending';
 
             if (isToday(taskDueDate)) {
@@ -688,20 +701,14 @@ export default function TasksPage() {
                 newStatus = 'missed';
             }
 
-            if(newStatus !== data.status) {
+            if(newStatus !== task.status) {
                 const taskRef = doc(db, 'tasks', taskDoc.id);
                 batch.update(taskRef, { status: newStatus });
                 shouldUpdate = true;
+                task.status = newStatus;
             }
-
-            tasksData.push({
-                id: taskDoc.id,
-                ...data,
-                status: newStatus,
-                dueDate: taskDueDate.toISOString(),
-                completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
-            } as Task);
         }
+        tasksData.push(task)
       });
       
       if(shouldUpdate) {
@@ -732,7 +739,7 @@ export default function TasksPage() {
     try {
         if (id) {
             const taskRef = doc(db, 'tasks', id);
-            await updateDoc(taskRef, data);
+            await updateDoc(taskRef, data as any);
             toast({ title: "Task Updated", description: `"${data.title}" has been updated.` });
         } else { 
             await addDoc(collection(db, 'tasks'), {
@@ -750,7 +757,7 @@ export default function TasksPage() {
   const handleUpdateTask = async (id: string, updatedTask: Partial<FirestoreTask>) => {
      try {
         const taskRef = doc(db, 'tasks', id);
-        await updateDoc(taskRef, updatedTask);
+        await updateDoc(taskRef, updatedTask as any);
      } catch (error) {
         console.error("Error updating task:", error);
         toast({ title: "Update Error", description: "Could not update the task.", variant: "destructive" });
@@ -780,7 +787,8 @@ export default function TasksPage() {
   const filteredTasks = tasks
     .filter(task =>
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.store?.toLowerCase().includes(searchQuery.toLowerCase())
+      task.store?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.storeName?.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .filter(task => filterCategories.includes(task.category));
 
@@ -825,10 +833,10 @@ export default function TasksPage() {
         for (const task of unresolvedTasks) {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
-                const fullAddress = `${locationResult.name}, ${locationResult.address}`;
+                const fullAddress = locationResult.address; // This is now lat,lon
                 locationsToVisit.push(fullAddress);
                 const taskRef = doc(db, 'tasks', task.id);
-                await updateDoc(taskRef, { store: fullAddress });
+                await updateDoc(taskRef, { store: fullAddress, storeName: locationResult.name });
             } else {
                 console.warn(`Could not find location for task: ${task.title}`);
             }
@@ -837,8 +845,11 @@ export default function TasksPage() {
         if (locationsToVisit.length > 0) {
             const params = new URLSearchParams();
             params.set('origin', userLocation);
-            params.set('destination', locationsToVisit[locationsToVisit.length - 1]);
-            locationsToVisit.slice(0, -1).forEach(wp => params.append('waypoints', wp));
+            const destination = locationsToVisit.pop();
+            if (destination) {
+                params.set('destination', destination);
+            }
+            locationsToVisit.forEach(wp => params.append('waypoints', wp));
             router.push(`/map?${params.toString()}`);
         } else {
             toast({ title: "No locations found", description: "Could not find any locations for the current tasks.", variant: "destructive" });
@@ -954,8 +965,4 @@ export default function TasksPage() {
         editingTask={editingTask}
         userLocation={userLocation}
         userName={user?.displayName || null}
-        categories={categories}
-      />
-    </>
-  );
-}
+        categories

@@ -1,4 +1,3 @@
-
 'use client';
 
 import dynamic from "next/dynamic";
@@ -6,7 +5,11 @@ import { useSearchParams } from 'next/navigation';
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
-const Map = dynamic(() => import("@/components/Map"), { ssr: false });
+// Dynamically import the Map component with ssr disabled
+const Map = dynamic(() => import("@/components/Map"), { 
+    ssr: false,
+    loading: () => <p>Loading map...</p>
+});
 
 export default function MapPage() {
     const searchParams = useSearchParams();

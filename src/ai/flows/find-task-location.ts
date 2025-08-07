@@ -15,7 +15,7 @@ import { findNearbyPlacesTool } from '../tools/location-tools';
 
 const FindTaskLocationInputSchema = z.object({
   taskTitle: z.string().describe("The title of the task, e.g., 'Buy groceries'."),
-  userLocation: z.string().describe("The user's current location as a string, e.g., 'Mountain View, CA' or a latitude,longitude pair."),
+  userLocation: z.string().describe("The user's current location as a latitude,longitude pair."),
 });
 
 export type FindTaskLocationInput = z.infer<typeof FindTaskLocationInputSchema>;
