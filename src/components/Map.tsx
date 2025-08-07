@@ -17,7 +17,7 @@ interface MapProps {
 }
 
 const Map = ({ origin, destination, waypoints }: MapProps) => {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey;
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Default center
 
@@ -46,9 +46,10 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
 
   if (!apiKey) {
     return (
-      <div className="flex items-center justify-center h-full bg-muted rounded-lg">
-        <p className="text-muted-foreground">
-          Google Maps API key is missing. Please provide one in your environment variables.
+      <div className="flex flex-col items-center justify-center h-full bg-muted rounded-lg p-4 text-center">
+        <h3 className="text-lg font-semibold text-foreground">Map Not Configured</h3>
+        <p className="text-sm text-muted-foreground mt-2">
+          To use the map features, please provide a Google Maps API key. Follow the instructions to create a key and add it to your project's `.env.local` file.
         </p>
       </div>
     );
@@ -63,7 +64,6 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
             options={{
               origin: origin,
               destination: destination,
-              waypoints: waypoints || [],
               travelMode: google.maps.TravelMode.DRIVING,
             }}
             callback={directionsCallback}
