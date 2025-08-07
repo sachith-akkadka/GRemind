@@ -875,6 +875,12 @@ export default function TasksPage() {
      }
   }
 
+  const NoTasksMessage = ({ message }: { message: string }) => (
+    <div className="text-center py-12">
+        <p className="text-muted-foreground">{message}</p>
+    </div>
+  );
+
   return (
     <>
       <div className="grid flex-1 items-start gap-4 md:gap-8 relative">
@@ -927,25 +933,37 @@ export default function TasksPage() {
               />
           </div>
           <TabsContent value="pending">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-              {pendingTasks.map((task) => (
-                <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation} />
-              ))}
-            </div>
+             {pendingTasks.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+                  {pendingTasks.map((task) => (
+                    <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation} />
+                  ))}
+                </div>
+             ) : (
+                <NoTasksMessage message="No pending tasks." />
+             )}
           </TabsContent>
           <TabsContent value="today">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-              {todayTasks.map((task) => (
-                <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
-              ))}
-            </div>
+            {todayTasks.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+                {todayTasks.map((task) => (
+                  <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
+                ))}
+              </div>
+            ) : (
+                <NoTasksMessage message="No tasks for today." />
+            )}
           </TabsContent>
           <TabsContent value="tomorrow">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-              {tomorrowTasks.map((task) => (
-                <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
-              ))}
-            </div>
+            {tomorrowTasks.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+                {tomorrowTasks.map((task) => (
+                    <TaskItem key={task.id} task={task} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask} userLocation={userLocation}/>
+                ))}
+                </div>
+            ) : (
+                <NoTasksMessage message="No tasks for tomorrow." />
+            )}
           </TabsContent>
         </Tabs>
 
@@ -970,5 +988,3 @@ export default function TasksPage() {
     </>
   );
 }
-
-    
