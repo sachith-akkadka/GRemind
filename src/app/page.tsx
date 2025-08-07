@@ -51,7 +51,7 @@ function HomePageContent() {
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
-                <Link href="/signup">Get Started for Free</Link>
+                <Link href="/login">Get Started for Free</Link>
               </Button>
             </div>
           </div>
@@ -198,7 +198,7 @@ function HomePageContent() {
                 </p>
                 <div className="mt-8">
                     <Button size="lg" asChild>
-                        <Link href="/signup">Get Started Now</Link>
+                        <Link href="/login">Get Started Now</Link>
                     </Button>
                 </div>
             </div>
