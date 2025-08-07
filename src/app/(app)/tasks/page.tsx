@@ -243,6 +243,7 @@ function NewTaskSheet({
   userLocation,
   userName,
   categories,
+  onFilterChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -253,6 +254,7 @@ function NewTaskSheet({
   userLocation: string | null;
   userName: string | null;
   categories: Category[];
+  onFilterChange: (category: string, checked: boolean) => void;
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -359,10 +361,11 @@ function NewTaskSheet({
   }, [debouncedLocation, fetchLocationSuggestions]);
 
   const handleLocationFocus = React.useCallback(async () => {
-    if (title && !location && userLocation) {
+    if ((title || !location) && userLocation) { // Show suggestions if title exists or location is empty
         setIsSuggestingLocations(true);
         try {
-            const result = await suggestLocations({ query: title, userLocation });
+            // Use title as query if it exists, otherwise get general suggestions for the area
+            const result = await suggestLocations({ query: title || '', userLocation });
             setLocationSuggestions(result.suggestions);
         } catch (error) {
             console.error("Failed to fetch contextual location suggestions:", error);
@@ -424,6 +427,9 @@ function NewTaskSheet({
         : newStatus,
       category: category,
     });
+    
+    // Ensure the category of the submitted task is in the filter
+    onFilterChange(category, true);
 
     onOpenChange(false);
   };
@@ -926,7 +932,7 @@ export default function TasksPage() {
 
   const onFilterChange = (category: string, checked: boolean) => {
     setFilterCategories(prev =>
-      checked ? [...prev, category] : prev.filter(c => c !== category)
+      checked ? [...new Set([...prev, category])] : prev.filter(c => c !== category)
     );
   };
 
@@ -1130,6 +1136,7 @@ export default function TasksPage() {
         userLocation={userLocation}
         userName={user?.displayName || null}
         categories={categories}
+        onFilterChange={onFilterChange}
       />
     </>
   );
