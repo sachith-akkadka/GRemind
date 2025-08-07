@@ -107,3 +107,8 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
                 return <Marker key={index} position={[lat, lon]}></Marker>
              })}
             {origin && destination && <Routing origin={origin} destination={destination} waypoints={waypoints} />}
+        </MapContainer>
+    );
+};
+
+export default Map;
