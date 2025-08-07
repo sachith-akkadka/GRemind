@@ -361,10 +361,10 @@ function NewTaskSheet({
   }, [debouncedLocation, fetchLocationSuggestions]);
 
   const handleLocationFocus = React.useCallback(async () => {
-    if ((title || !location) && userLocation) { // Show suggestions if title exists or location is empty
+    if (userLocation) {
+      if (locationSuggestions.length === 0 || locationName === '') {
         setIsSuggestingLocations(true);
         try {
-            // Use title as query if it exists, otherwise get general suggestions for the area
             const result = await suggestLocations({ query: title || '', userLocation });
             setLocationSuggestions(result.suggestions);
         } catch (error) {
@@ -372,8 +372,9 @@ function NewTaskSheet({
         } finally {
             setIsSuggestingLocations(false);
         }
+      }
     }
-  }, [title, location, userLocation]);
+  }, [userLocation, title, locationName, locationSuggestions.length]);
 
   const handleMapIconClick = () => {
     if (userLocation) {
@@ -709,7 +710,7 @@ export default function TasksPage() {
     return () => {
         navigator.serviceWorker.removeEventListener('notificationclick', handleNotificationClick);
     };
-  }, [tasks, userLocation]); // Rerun when tasks or location change
+  }, [tasks, userLocation, router, toast]); // Rerun when tasks or location change
 
   React.useEffect(() => {
     requestNotificationPermission().then(granted => {
@@ -871,7 +872,7 @@ export default function TasksPage() {
     });
 
     return () => unsubscribe();
-  }, [user, userLocation, userPreferences.defaultReminder]);
+  }, [user, userLocation, userPreferences.defaultReminder, toast]);
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
