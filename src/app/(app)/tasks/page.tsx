@@ -742,7 +742,7 @@ export default function TasksPage() {
                 scheduleNotification(
                     `Reminder: ${task.title}`,
                     { body: `Due in ${reminderMinutes} minutes at ${format(taskDueDate, 'p')}.`, tag: task.id + '_time' },
-                    timeUntilDue - notificationDelay
+                    timeUntilDue
                 );
                 notifiedTasksRef.current.add(task.id + '_time');
             }
@@ -776,6 +776,7 @@ export default function TasksPage() {
                     );
                     // This is for demonstration. Real actions require a service worker.
                     // For now, we'll assume 'Yes' if the notification is clicked.
+                    // A more robust solution would listen for notification clicks.
                     const taskRef = doc(db, 'tasks', task.id);
                     updateDoc(taskRef, { status: 'completed', completedAt: Timestamp.now() });
 
@@ -811,7 +812,7 @@ export default function TasksPage() {
     });
 
     return () => unsubscribe();
-  }, [user, userLocation, userPreferences]);
+  }, [user, userLocation, userPreferences.defaultReminder]);
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
