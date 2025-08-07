@@ -82,6 +82,23 @@ import {
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { requestNotificationPermission, scheduleNotification, showNotification } from '@/lib/notifications';
+
+// Haversine formula to calculate distance between two lat/lon points
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // in metres
+}
 
 function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }: { task: Task, onUpdateTask: (id: string, updates: Partial<FirestoreTask>) => void, onDeleteTask: (id: string) => void, onEditTask: (task: Task) => void, userLocation: string | null }) {
   const statusVariant = {
@@ -631,9 +648,19 @@ export default function TasksPage() {
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
   const [isNavigatingMultiple, setIsNavigatingMultiple] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('today');
+  const notifiedTasksRef = React.useRef(new Set());
 
 
   React.useEffect(() => {
+    // Request notification permission on component mount
+    requestNotificationPermission().then(granted => {
+        if (granted) {
+            toast({ title: "Notifications enabled!", description: "You'll receive reminders for your tasks." });
+        } else {
+            toast({ title: "Notifications blocked", description: "You won't receive task reminders. You can enable them in your browser settings.", variant: "destructive" });
+        }
+    });
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -679,6 +706,7 @@ export default function TasksPage() {
       const batch = writeBatch(db);
       const today = startOfDay(new Date());
       let shouldUpdate = false;
+      const notificationDelay = 10 * 60 * 1000; // 10 minutes
 
       querySnapshot.forEach((taskDoc) => {
         const data = taskDoc.data() as FirestoreTask;
@@ -689,10 +717,38 @@ export default function TasksPage() {
             completedAt: (data.completedAt as Timestamp)?.toDate().toISOString(),
         } as Task;
 
+        // --- Notification & Status Logic ---
         if (task.status !== 'completed') {
             const taskDueDate = parseISO(task.dueDate);
-            let newStatus: Task['status'] = 'pending';
+            const timeUntilDue = taskDueDate.getTime() - new Date().getTime();
 
+            // 1. Time-based notification
+            if (timeUntilDue > 0 && timeUntilDue < notificationDelay && !notifiedTasksRef.current.has(task.id + '_time')) {
+                scheduleNotification(
+                    `Reminder: ${task.title}`,
+                    { body: `This task is due at ${format(taskDueDate, 'p')}.`, tag: task.id },
+                    timeUntilDue - notificationDelay
+                );
+                notifiedTasksRef.current.add(task.id + '_time');
+            }
+            
+            // 2. Location-based notification (Simulated)
+            if (task.store && userLocation && !notifiedTasksRef.current.has(task.id + '_loc')) {
+                const [taskLat, taskLon] = task.store.split(',').map(Number);
+                const [userLat, userLon] = userLocation.split(',').map(Number);
+                const distance = getDistance(userLat, userLon, taskLat, taskLon);
+                if (distance <= 100) { // 100 meters
+                     showNotification(
+                        `Nearby Task: ${task.title}`,
+                        { body: `You can do this at ${task.storeName || 'the destination'} just 100m away!`, tag: task.id }
+                     );
+                     notifiedTasksRef.current.add(task.id + '_loc');
+                }
+            }
+
+
+            // 3. Status update logic
+            let newStatus: Task['status'] = 'pending';
             if (isToday(taskDueDate)) {
                 newStatus = 'today';
             } else if (isTomorrow(taskDueDate)) {
@@ -719,7 +775,7 @@ export default function TasksPage() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, userLocation]);
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
@@ -792,7 +848,7 @@ export default function TasksPage() {
     )
     .filter(task => filterCategories.includes(task.category));
 
-  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'today' || task.status === 'missed' || task.status === 'tomorrow');
+  const pendingTasks = filteredTasks.filter((task) => task.status === 'pending' || task.status === 'missed' || task.status === 'tomorrow');
   const todayTasks = filteredTasks.filter((task) => task.status === 'today');
   const tomorrowTasks = filteredTasks.filter((task) => task.status === 'tomorrow');
 
