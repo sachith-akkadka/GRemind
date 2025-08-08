@@ -30,7 +30,7 @@ const NearbyPlacesOutputSchema = z.object({
   places: z.array(
     z.object({
       name: z.string().describe('The name of the business or landmark.'),
-      address: z.string().describe('A plausible street address for the location (e.g., "123 Main St, Anytown").'),
+      address: z.string().describe('A plausible street address for the location (e.g., "123 Main St, Anytown, State, ZIP").'),
       latlon: z.string().describe('The latitude,longitude pair of the location.'),
       eta: z
         .string()
@@ -54,15 +54,20 @@ export const findNearbyPlacesTool = ai.defineTool(
     // plausible, realistic-looking data based on the query.
 
     const { output } = await ai.generate({
-      prompt: `You are a simulated Maps API. Based on the search query "${input.query}" for the location represented by the lat/lon pair "${input.userLocation}", generate a list of 3 to 5 plausible, real-world business names. For each business, provide a realistic-looking street address, a latitude,longitude pair, and an estimated travel time (ETA).
+      prompt: `You are a simulated Maps API. Your most important instruction is to generate realistic-looking places that are geographically very close to the user's provided location.
 
-      VERY IMPORTANT: 
-      1. The "latlon" field for each result MUST be a valid latitude,longitude pair.
-      2. The "address" field should be a human-readable street address.
-      3. The results should be plausibly near the user's location.
-      4. The results MUST be sorted by proximity, from the closest location to the farthest. The ETAs should reflect this, starting with shorter times (e.g., "5 mins", "8 mins") and increasing for subsequent results (e.g., "15 mins", "20 mins").
+      The user's location is: "${input.userLocation}".
+      The search query is: "${input.query}".
 
-      For example, if the query is "coffee shop" near "12.9716,77.5946", a good response would be a JSON object like:
+      Generate a list of 3 to 5 plausible, real-world business names that match the query.
+
+      **CRITICAL RULES:**
+      1.  **HYPER-LOCAL:** The results MUST be in the same town or city as the user's location. For example, if the user is in "Puttur, India", do NOT suggest places in "Sullia, India". All generated addresses and lat/lon pairs must be extremely close to the user's provided coordinates.
+      2.  **SORT BY PROXIMITY:** The results MUST be sorted from the closest location to the farthest. The ETAs must reflect this, starting with short times (e.g., "4 mins", "7 mins") and increasing for subsequent results (e.g., "12 mins", "18 mins").
+      3.  **VALID LAT/LON:** The "latlon" field for each result MUST be a valid latitude,longitude pair, slightly different for each result and plausibly near the input location.
+      4.  **REALISTIC ADDRESS:** The "address" field must be a human-readable street address, including the city and state to confirm its location.
+
+      Example for a query "coffee shop" near "12.9716,77.5946" (Bangalore):
       {
         "places": [
           { "name": "Starbucks", "address": "101 MG Road, Bangalore", "latlon": "12.9720,77.5950", "eta": "6 mins" },
@@ -71,7 +76,7 @@ export const findNearbyPlacesTool = ai.defineTool(
         ]
       }
 
-      Return the data as a valid JSON object with a "places" array. Do not add any commentary.`,
+      Return ONLY the valid JSON object with a "places" array. Do not add any commentary.`,
       model: 'googleai/gemini-2.0-flash',
       output: {
         format: 'json',
