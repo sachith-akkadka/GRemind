@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useJsApiLoader, GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { LoadScript, GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
 
@@ -18,19 +18,7 @@ interface MapProps {
 
 const libraries: ('places' | 'directions')[] = ['places', 'directions'];
 
-const Map = ({ origin, destination, waypoints }: MapProps) => {
-    // This is the only place we get the API key from.
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-    const { isLoaded, loadError } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: apiKey || "",
-        libraries,
-        // Disable the loader if the API key is not yet available.
-        // This is the most important part to prevent re-renders with different options.
-        preventGoogleFontsLoading: true,
-    });
-
+const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
     const [directionsResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null);
     const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Default center
 
@@ -51,7 +39,7 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
     }, [origin]);
 
     useEffect(() => {
-        if (isLoaded && origin && destination) {
+        if (origin && destination && window.google) {
             const directionsService = new window.google.maps.DirectionsService();
             directionsService.route(
                 {
@@ -72,33 +60,7 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
         } else {
             setDirectionsResponse(null);
         }
-    }, [isLoaded, origin, destination, waypoints]);
-    
-    if (!apiKey) {
-      return (
-            <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive text-center p-4">
-                <div>
-                    <h3 className="font-bold">API Key Missing</h3>
-                    <p className="text-sm">The Google Maps API Key is not configured. Please add it to your environment variables.</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (loadError) {
-        return (
-            <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive text-center p-4">
-                <div>
-                    <h3 className="font-bold">Error Loading Map</h3>
-                    <p className="text-sm">Failed to load Google Maps. Please check your API key, billing status, and ensure the correct APIs (Maps JavaScript, Directions, Places, Distance Matrix) are enabled in your Google Cloud project.</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!isLoaded) {
-        return <Skeleton className="h-full w-full" />;
-    }
+    }, [origin, destination, waypoints]);
 
     return (
         <GoogleMap
@@ -119,6 +81,32 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
                 </>
             )}
         </GoogleMap>
+    );
+};
+
+const Map = (props: MapProps) => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+    if (!apiKey) {
+      return (
+            <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive text-center p-4">
+                <div>
+                    <h3 className="font-bold">API Key Missing</h3>
+                    <p className="text-sm">The Google Maps API Key is not configured. Please add it to your environment variables.</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <LoadScript
+            googleMapsApiKey={apiKey}
+            libraries={libraries}
+            loadingElement={<Skeleton className="h-full w-full" />}
+            onError={(error) => console.error("Map script load error:", error)}
+        >
+            <MapComponent {...props} />
+        </LoadScript>
     );
 };
 
