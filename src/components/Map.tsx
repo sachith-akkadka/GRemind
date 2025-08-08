@@ -2,7 +2,7 @@
 "use client";
 
 import { GoogleMap, Marker, DirectionsRenderer, useLoadScript } from '@react-google-maps/api';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES } from '@/lib/google-maps';
 
@@ -19,22 +19,16 @@ interface MapProps {
 
 const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
     const [directionsResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null);
-    const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Default center
 
-    useEffect(() => {
+    const mapCenter = useMemo(() => {
         if (origin) {
             const [lat, lng] = origin.split(',').map(Number);
             if (!isNaN(lat) && !isNaN(lng)) {
-              setMapCenter({ lat, lng });
+              return { lat, lng };
             }
-        } else if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                setMapCenter({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                });
-            });
         }
+        // A neutral default if origin isn't set yet. It will be updated once geolocation is fetched.
+        return { lat: 34.0522, lng: -118.2437 }; 
     }, [origin]);
 
     useEffect(() => {
