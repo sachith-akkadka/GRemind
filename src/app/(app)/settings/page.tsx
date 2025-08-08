@@ -43,7 +43,6 @@ export default function SettingsPage() {
     const [defaultReminder, setDefaultReminder] = useState('10'); // Default to 10 minutes
     const [aiReschedule, setAiReschedule] = useState(true);
     const [weeklyReport, setWeeklyReport] = useState(false);
-    const [taskSort, setTaskSort] = useState('dueDate');
     
     useEffect(() => {
         if (!user) return;
@@ -76,7 +75,6 @@ export default function SettingsPage() {
             if (docSnap.exists()) {
                 const prefs = docSnap.data();
                 setDefaultReminder(prefs.defaultReminder || '10');
-                setTaskSort(prefs.taskSort || 'dueDate');
                 setEmailNotifications(prefs.emailNotifications !== false);
                 setAiReschedule(prefs.aiReschedule !== false);
                 setWeeklyReport(prefs.weeklyReport === true);
@@ -106,7 +104,6 @@ export default function SettingsPage() {
             const prefsRef = doc(db, 'users', user.uid, 'preferences', 'settings');
             await setDoc(prefsRef, {
                 defaultReminder,
-                taskSort,
                 emailNotifications,
                 aiReschedule,
                 weeklyReport
@@ -307,22 +304,6 @@ export default function SettingsPage() {
             </div>
             <ThemeToggle />
           </div>
-           <div className="flex items-center justify-between">
-            <div>
-              <Label>Task Sorting</Label>
-              <p className="text-sm text-muted-foreground">Set the default sort order for your tasks.</p>
-            </div>
-             <Select value={taskSort} onValueChange={setTaskSort}>
-                <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select order" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="dueDate">Due Date</SelectItem>
-                    <SelectItem value="priority">Priority</SelectItem>
-                    <SelectItem value="category">Category</SelectItem>
-                </SelectContent>
-            </Select>
-          </div>
         </CardContent>
          <CardFooter className="border-t px-6 py-4">
             <Button onClick={handleSavePreferences} disabled={isSavingPrefs}>
@@ -492,5 +473,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
