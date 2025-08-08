@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'G-Remind',
   description: 'Your intelligent location-based task manager',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
