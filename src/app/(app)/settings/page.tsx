@@ -41,7 +41,6 @@ export default function SettingsPage() {
     // New states for settings
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [defaultReminder, setDefaultReminder] = useState('10'); // Default to 10 minutes
-    const [defaultCategory, setDefaultCategory] = useState('Personal');
     const [aiReschedule, setAiReschedule] = useState(true);
     const [weeklyReport, setWeeklyReport] = useState(false);
     const [taskSort, setTaskSort] = useState('dueDate');
@@ -77,7 +76,6 @@ export default function SettingsPage() {
             if (docSnap.exists()) {
                 const prefs = docSnap.data();
                 setDefaultReminder(prefs.defaultReminder || '10');
-                setDefaultCategory(prefs.defaultCategory || 'Personal');
                 setTaskSort(prefs.taskSort || 'dueDate');
                 setEmailNotifications(prefs.emailNotifications !== false);
                 setAiReschedule(prefs.aiReschedule !== false);
@@ -108,7 +106,6 @@ export default function SettingsPage() {
             const prefsRef = doc(db, 'users', user.uid, 'preferences', 'settings');
             await setDoc(prefsRef, {
                 defaultReminder,
-                defaultCategory,
                 taskSort,
                 emailNotifications,
                 aiReschedule,
@@ -309,22 +306,6 @@ export default function SettingsPage() {
               <p className="text-sm text-muted-foreground">Select your preferred color scheme.</p>
             </div>
             <ThemeToggle />
-          </div>
-           <div className="flex items-center justify-between">
-            <div>
-              <Label>Default Task Category</Label>
-              <p className="text-sm text-muted-foreground">Choose a default category for new tasks.</p>
-            </div>
-             <Select value={defaultCategory} onValueChange={setDefaultCategory}>
-                <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                    {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
           </div>
            <div className="flex items-center justify-between">
             <div>

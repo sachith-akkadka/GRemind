@@ -72,6 +72,7 @@ import { format, parseISO, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
 import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
+import { suggestTaskCategory } from '@/ai/flows/suggest-task-category';
 import { findTaskLocation } from '@/ai/flows/find-task-location';
 import { findNextLocationAndRoute } from '@/ai/flows/find-next-location-and-route';
 import {
@@ -138,8 +139,8 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         try {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
-                // The address from the tool is now a lat,lon string
-                destination = `${locationResult.address}`; 
+                // The latlon from the tool is used for routing
+                destination = `${locationResult.latlon}`; 
                 onUpdateTask(task.id, { store: destination, storeName: locationResult.name });
             } else {
                  toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive" });
@@ -196,7 +197,10 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Badge variant={statusVariant[task.status]} className="w-fit capitalize">{task.status}</Badge>
+        <div className="flex gap-2 items-center">
+            <Badge variant={statusVariant[task.status]} className="w-fit capitalize">{task.status}</Badge>
+            <Badge variant="outline" className="w-fit">{task.category}</Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground space-y-1">
@@ -265,8 +269,7 @@ function NewTaskSheet({
   const [hour, setHour] = React.useState('09');
   const [minute, setMinute] = React.useState('00');
   const [ampm, setAmpm] = React.useState('AM');
-  const [category, setCategory] = React.useState('Personal');
-
+  
   const [location, setLocation] = React.useState('');
   const [locationName, setLocationName] = React.useState('');
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
@@ -296,7 +299,6 @@ function NewTaskSheet({
         setAmpm(formattedAmPm.toUpperCase());
         setLocation(editingTask.store || '');
         setLocationName(editingTask.storeName || '');
-        setCategory(editingTask.category);
       } else {
         setTitle('');
         setDescription('');
@@ -307,7 +309,6 @@ function NewTaskSheet({
         setAmpm(format(now, 'aa').toUpperCase());
         setLocation('');
         setLocationName('');
-        setCategory('Personal');
       }
       setLocationSuggestions([]);
       setTaskSuggestions([]);
@@ -392,7 +393,7 @@ function NewTaskSheet({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title || !dueDate) {
       toast({
         title: 'Missing Information',
@@ -419,6 +420,23 @@ function NewTaskSheet({
     } else if (isTomorrow(combinedDueDate)) {
         newStatus = 'tomorrow';
     }
+
+    let category = 'Uncategorized';
+    if (editingTask?.category && title === editingTask.title) {
+        category = editingTask.category;
+    } else {
+      try {
+        const categoryResult = await suggestTaskCategory({
+            taskTitle: title,
+            pastCategories: categories.map(c => c.name)
+        });
+        category = categoryResult.suggestedCategory;
+      } catch (error) {
+          console.error("Failed to suggest category:", error);
+          toast({ title: "AI Category Suggestion Failed", variant: "destructive" });
+      }
+    }
+
 
     onTaskSubmit({
       id: editingTask?.id,
@@ -574,19 +592,6 @@ function NewTaskSheet({
                 </div>
               </div>
             </div>
-             <div className="grid gap-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger id="category">
-                          <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {categories.map(cat => (
-                              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                          ))}
-                      </SelectContent>
-                  </Select>
-              </div>
              <div className="grid gap-2 relative">
               <Label htmlFor="location">Location (Optional)</Label>
               <div className="flex items-center gap-2">
@@ -616,7 +621,7 @@ function NewTaskSheet({
                         key={index}
                         className="p-3 hover:bg-muted cursor-pointer border-b"
                         onClick={() => {
-                          setLocation(suggestion.address); // The lat,lon string
+                          setLocation(suggestion.latlon); // The lat,lon string
                           setLocationName(suggestion.name); // The readable name
                           setShowLocationSuggestions(false);
                         }}
@@ -991,7 +996,7 @@ export default function TasksPage() {
         for (const task of unresolvedTasks) {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
-                const fullAddress = locationResult.address; // This is now lat,lon
+                const fullAddress = locationResult.latlon; // This is now lat,lon
                 locationsToVisit.push(fullAddress);
                 const taskRef = doc(db, 'tasks', task.id);
                 await updateDoc(taskRef, { store: fullAddress, storeName: locationResult.name });
@@ -1147,3 +1152,4 @@ export default function TasksPage() {
     </>
   );
 }
+

@@ -25,6 +25,7 @@ const SuggestLocationsOutputSchema = z.object({
   suggestions: z.array(z.object({
     name: z.string(),
     address: z.string(),
+    latlon: z.string(),
     eta: z.string(),
   })).describe('A list of up to 5 location suggestions with name, address, and ETA.'),
 });

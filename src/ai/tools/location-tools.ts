@@ -30,7 +30,8 @@ const NearbyPlacesOutputSchema = z.object({
   places: z.array(
     z.object({
       name: z.string().describe('The name of the business or landmark.'),
-      address: z.string().describe('The latitude,longitude pair of the location.'),
+      address: z.string().describe('A plausible street address for the location (e.g., "123 Main St, Anytown").'),
+      latlon: z.string().describe('The latitude,longitude pair of the location.'),
       eta: z
         .string()
         .describe('The estimated time of arrival (e.g., "5 mins", "12 mins").'),
@@ -53,18 +54,20 @@ export const findNearbyPlacesTool = ai.defineTool(
     // plausible, realistic-looking data based on the query.
 
     const { output } = await ai.generate({
-      prompt: `You are a simulated Maps API. Based on the search query "${input.query}" for the location represented by the lat/lon pair "${input.userLocation}", generate a list of 3 to 5 plausible, real-world business names with realistic-looking latitude,longitude addresses and estimated travel times (ETAs).
+      prompt: `You are a simulated Maps API. Based on the search query "${input.query}" for the location represented by the lat/lon pair "${input.userLocation}", generate a list of 3 to 5 plausible, real-world business names. For each business, provide a realistic-looking street address, a latitude,longitude pair, and an estimated travel time (ETA).
 
-      VERY IMPORTANT: The address for each result MUST be a valid latitude,longitude pair. The results should be plausibly near the user's location.
-
-      The results MUST be sorted by proximity, from the closest location to the farthest. The ETAs should reflect this, starting with shorter times (e.g., "5 mins", "8 mins") and increasing for subsequent results (e.g., "15 mins", "20 mins").
+      VERY IMPORTANT: 
+      1. The "latlon" field for each result MUST be a valid latitude,longitude pair.
+      2. The "address" field should be a human-readable street address.
+      3. The results should be plausibly near the user's location.
+      4. The results MUST be sorted by proximity, from the closest location to the farthest. The ETAs should reflect this, starting with shorter times (e.g., "5 mins", "8 mins") and increasing for subsequent results (e.g., "15 mins", "20 mins").
 
       For example, if the query is "coffee shop" near "12.9716,77.5946", a good response would be a JSON object like:
       {
         "places": [
-          { "name": "Starbucks", "address": "12.9720,77.5950", "eta": "6 mins" },
-          { "name": "Third Wave Coffee", "address": "12.9700,77.5980", "eta": "9 mins" },
-          { "name": "Blue Tokai Coffee", "address": "12.9695,77.6001", "eta": "14 mins" }
+          { "name": "Starbucks", "address": "101 MG Road, Bangalore", "latlon": "12.9720,77.5950", "eta": "6 mins" },
+          { "name": "Third Wave Coffee", "address": "45 Commercial St, Bangalore", "latlon": "12.9700,77.5980", "eta": "9 mins" },
+          { "name": "Blue Tokai Coffee", "address": "78 Richmond Rd, Bangalore", "latlon": "12.9695,77.6001", "eta": "14 mins" }
         ]
       }
 

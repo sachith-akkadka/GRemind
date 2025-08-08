@@ -16,8 +16,8 @@ import { findTaskLocation } from './find-task-location';
 const FindNextLocationAndRouteInputSchema = z.object({
   taskTitle: z.string().describe("The title of the task that was not completed."),
   userLocation: z.string().describe("The user's current location as a latitude,longitude pair."),
-  locationToExclude: z.string().describe("The address of the location the user just left (lat,lon)."),
-  remainingDestinations: z.array(z.string()).describe("An array of the remaining destination addresses (lat,lon strings) on the user's route."),
+  locationToExclude: z.string().describe("The latlon of the location the user just left."),
+  remainingDestinations: z.array(z.string()).describe("An array of the remaining destination latlon strings on the user's route."),
 });
 
 export type FindNextLocationAndRouteInput = z.infer<typeof FindNextLocationAndRouteInputSchema>;
@@ -27,8 +27,8 @@ const FindNextLocationAndRouteOutputSchema = z.object({
     name: z.string(),
     address: z.string(),
   }).nullable(),
-  newDestination: z.string().nullable().describe("The next primary destination address (lat,lon)."),
-  newWaypoints: z.array(z.string()).describe("The updated list of waypoint addresses for the optimized route."),
+  newDestination: z.string().nullable().describe("The next primary destination latlon."),
+  newWaypoints: z.array(z.string()).describe("The updated list of waypoint latlons for the optimized route."),
 });
 
 export type FindNextLocationAndRouteOutput = z.infer<typeof FindNextLocationAndRouteOutputSchema>;
@@ -63,15 +63,15 @@ const findNextLocationAndRouteFlow = ai.defineFlow(
         };
     }
     
-    const allStops = [...input.remainingDestinations, newLocation.address];
+    const allStops = [...input.remainingDestinations, newLocation.latlon];
 
     // 2. Ask the LLM to re-optimize the route.
     // This is a simplified approach. A real-world app would use a Directions Matrix API.
     const { output } = await ai.generate({
-        prompt: `You are a route optimization expert. Given a user's current location and a list of stops they need to make, determine the most efficient order to visit them. The last stop in your optimized list will be the final destination.
+        prompt: `You are a route optimization expert. Given a user's current location and a list of stops (as lat,lon pairs) they need to make, determine the most efficient order to visit them. The last stop in your optimized list will be the final destination.
 
 User's Current Location: ${input.userLocation}
-List of Stops (in no particular order): ${allStops.join(', ')}
+List of Stops (in no particular order): ${allStops.join('; ')}
 
 Please provide the optimized list of stops as a simple array of strings in a JSON object. The last item in the array is the final destination, and the rest are waypoints.
 Example Response: { "optimizedRoute": ["lat1,lon1", "lat2,lon2", "lat3,lon3"] }
@@ -90,7 +90,7 @@ Example Response: { "optimizedRoute": ["lat1,lon1", "lat2,lon2", "lat3,lon3"] }
     const newWaypoints = optimizedRoute;
 
     return {
-      newLocation: { name: newLocation.name, address: newLocation.address },
+      newLocation: { name: newLocation.name, address: newLocation.latlon },
       newDestination,
       newWaypoints,
     };

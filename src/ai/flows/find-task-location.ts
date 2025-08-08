@@ -16,7 +16,7 @@ import { findNearbyPlacesTool } from '../tools/location-tools';
 const FindTaskLocationInputSchema = z.object({
   taskTitle: z.string().describe("The title of the task, e.g., 'Buy groceries'."),
   userLocation: z.string().describe("The user's current location as a latitude,longitude pair."),
-  locationsToExclude: z.array(z.string()).optional().describe("A list of location addresses (lat,lon strings) to exclude from the search results."),
+  locationsToExclude: z.array(z.string()).optional().describe("A list of location latlon strings to exclude from the search results."),
 });
 
 export type FindTaskLocationInput = z.infer<typeof FindTaskLocationInputSchema>;
@@ -24,6 +24,7 @@ export type FindTaskLocationInput = z.infer<typeof FindTaskLocationInputSchema>;
 const FindTaskLocationOutputSchema = z.object({
     name: z.string(),
     address: z.string(),
+    latlon: z.string(),
     eta: z.string(),
 }).describe('The single best suggested location for the task.');
 
@@ -46,7 +47,7 @@ const findTaskLocationFlow = ai.defineFlow(
     const toolResult = await findNearbyPlacesTool({ query: input.taskTitle, userLocation: input.userLocation });
 
     const filteredPlaces = toolResult.places?.filter(place => 
-      !input.locationsToExclude?.includes(place.address)
+      !input.locationsToExclude?.includes(place.latlon)
     );
 
     // If the tool returns any places, we return the first one, which is the most relevant/closest.
