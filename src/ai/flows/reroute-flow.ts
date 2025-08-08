@@ -10,7 +10,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { firebaseConfig } from '@/lib/firebase';
 
 
 export type RerouteInput = z.infer<typeof RerouteInputSchema>;
@@ -40,6 +39,11 @@ export async function reroute(input: RerouteInput): Promise<RerouteOutput> {
           return { optimizedRoute: input.destinations };
       }
       
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        throw new Error("Google Maps API key is not configured.");
+      }
+      
       // Use the Google Directions API to optimize the route.
       const directionsUrl = new URL('https://maps.googleapis.com/maps/api/directions/json');
       directionsUrl.searchParams.set('origin', input.userLocation);
@@ -52,10 +56,6 @@ export async function reroute(input: RerouteInput): Promise<RerouteOutput> {
           directionsUrl.searchParams.set('waypoints', `optimize:true|${waypoints.join('|')}`);
       }
 
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      if (!apiKey) {
-        throw new Error("Google Maps API key is not configured.");
-      }
       directionsUrl.searchParams.set('key', apiKey);
 
       try {

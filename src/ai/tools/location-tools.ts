@@ -10,7 +10,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { firebaseConfig } from '@/lib/firebase';
 import { z } from 'zod';
 
 // Define the schema for the tool's input
@@ -51,12 +50,17 @@ export const findNearbyPlacesTool = ai.defineTool(
     outputSchema: NearbyPlacesOutputSchema,
   },
   async (input) => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+        throw new Error("Google Maps API key is not configured.");
+    }
+
     // 1. Find Nearby Places using Places API
     const placesUrl = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
     placesUrl.searchParams.set('location', input.userLocation);
     placesUrl.searchParams.set('rankby', 'distance');
     placesUrl.searchParams.set('keyword', input.query);
-    placesUrl.searchParams.set('key', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey);
+    placesUrl.searchParams.set('key', apiKey);
 
     const placesResponse = await fetch(placesUrl.toString());
     const placesData = await placesResponse.json();
@@ -76,7 +80,7 @@ export const findNearbyPlacesTool = ai.defineTool(
     const matrixUrl = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
     matrixUrl.searchParams.set('origins', input.userLocation);
     matrixUrl.searchParams.set('destinations', nearbyPlaces.map((p: any) => p.latlon).join('|'));
-    matrixUrl.searchParams.set('key', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey);
+    matrixUrl.searchParams.set('key', apiKey);
     
     const matrixResponse = await fetch(matrixUrl.toString());
     const matrixData = await matrixResponse.json();

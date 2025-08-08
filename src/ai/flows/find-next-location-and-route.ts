@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Implements a flow to re-optimize a route when a task is not completed.
@@ -11,7 +12,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { findTaskLocation } from './find-task-location';
-import { firebaseConfig } from '@/lib/firebase';
 
 
 const FindNextLocationAndRouteInputSchema = z.object({
@@ -67,6 +67,11 @@ const findNextLocationAndRouteFlow = ai.defineFlow(
     
     const allStops = [...input.remainingDestinations, newLocation.latlon];
 
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      throw new Error("Google Maps API key is not configured.");
+    }
+    
     // 2. Use Google Directions API to optimize the route.
     const directionsUrl = new URL('https://maps.googleapis.com/maps/api/directions/json');
     directionsUrl.searchParams.set('origin', input.userLocation);
@@ -77,7 +82,7 @@ const findNextLocationAndRouteFlow = ai.defineFlow(
         directionsUrl.searchParams.set('waypoints', `optimize:true|${waypoints.join('|')}`);
     }
     
-    directionsUrl.searchParams.set('key', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey);
+    directionsUrl.searchParams.set('key', apiKey);
     
     try {
         const response = await fetch(directionsUrl.toString());
