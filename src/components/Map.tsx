@@ -1,7 +1,7 @@
 
 "use client";
 
-import { LoadScript, GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, Marker, DirectionsRenderer, useLoadScript } from '@react-google-maps/api';
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES } from '@/lib/google-maps';
@@ -85,6 +85,26 @@ const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
 };
 
 const Map = (props: MapProps) => {
+    const { isLoaded, loadError } = useLoadScript({
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+        libraries: GOOGLE_MAPS_LIBRARIES,
+    });
+
+    if (loadError) {
+        return (
+             <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive text-center p-4">
+                <div>
+                    <h3 className="font-bold">Map Load Error</h3>
+                    <p className="text-sm">There was an error loading the map script. Please check the API key and console for more details.</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (!isLoaded) {
+        return <Skeleton className="h-full w-full" />;
+    }
+    
     if (!GOOGLE_MAPS_API_KEY) {
       return (
             <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive text-center p-4">
@@ -96,16 +116,7 @@ const Map = (props: MapProps) => {
         );
     }
 
-    return (
-        <LoadScript
-            googleMapsApiKey={GOOGLE_MAPS_API_KEY}
-            libraries={GOOGLE_MAPS_LIBRARIES}
-            loadingElement={<Skeleton className="h-full w-full" />}
-            onError={(error) => console.error("Map script load error:", error)}
-        >
-            <MapComponent {...props} />
-        </LoadScript>
-    );
+    return <MapComponent {...props} />;
 };
 
 export default Map;
