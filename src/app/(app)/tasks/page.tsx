@@ -483,7 +483,14 @@ function NewTaskSheet({
         </SheetHeader>
         <div className="flex-1 overflow-y-auto -mr-6 pr-6">
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2 relative">
+            <div 
+              className="grid gap-2 relative"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setShowTaskSuggestions(false);
+                }
+              }}
+            >
               <Label htmlFor="title">Task Title</Label>
                 <div className="relative">
                   <Input
@@ -504,7 +511,7 @@ function NewTaskSheet({
                     <button
                       key={i}
                       type="button"
-                      onClick={() => {
+                      onMouseDown={() => { // use onMouseDown to fire before onBlur
                           setTitle(s);
                           setShowTaskSuggestions(false);
                       }}
@@ -593,7 +600,14 @@ function NewTaskSheet({
                 </div>
               </div>
             </div>
-             <div className="grid gap-2 relative">
+             <div 
+                className="grid gap-2 relative"
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    setShowLocationSuggestions(false);
+                  }
+                }}
+              >
               <Label htmlFor="location">Location (Optional)</Label>
               <div className="flex items-center gap-2">
                 <div className="relative w-full">
@@ -621,7 +635,7 @@ function NewTaskSheet({
                       <div
                         key={index}
                         className="p-3 hover:bg-muted cursor-pointer border-b"
-                        onClick={() => {
+                        onMouseDown={() => { // use onMouseDown to fire before onBlur
                           setLocation(suggestion.latlon); // The lat,lon string
                           setLocationName(suggestion.name); // The readable name
                           setShowLocationSuggestions(false);
@@ -1154,5 +1168,6 @@ export default function TasksPage() {
     </>
   );
 }
+
 
 
