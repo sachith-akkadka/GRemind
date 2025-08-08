@@ -20,12 +20,7 @@ const libraries: ('places' | 'directions')[] = ['places', 'directions'];
 
 const Map = ({ origin, destination, waypoints }: MapProps) => {
     // State to hold the API key, ensuring it's available client-side
-    const [apiKey, setApiKey] = useState<string | undefined>(undefined);
-
-    useEffect(() => {
-        // This effect runs only on the client, after hydration
-        setApiKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
-    }, []);
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: apiKey || "",
