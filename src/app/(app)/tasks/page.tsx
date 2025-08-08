@@ -86,6 +86,7 @@ import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { requestNotificationPermission, showNotification } from '@/lib/notifications';
+import { LocationPicker } from '@/components/LocationPicker';
 
 // Haversine formula to calculate distance between two lat/lon points
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -262,7 +263,6 @@ function NewTaskSheet({
   onFilterChange: (category: string, checked: boolean) => void;
 }) {
   const { toast } = useToast();
-  const router = useRouter();
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
@@ -276,6 +276,8 @@ function NewTaskSheet({
   const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
   const [isSuggestingLocations, setIsSuggestingLocations] = React.useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = React.useState(true);
+  const [isLocationPickerOpen, setIsLocationPickerOpen] = React.useState(false);
+
 
   const [taskSuggestions, setTaskSuggestions] = React.useState<SuggestTasksOutput['suggestions']>([]);
   const [isSuggestingTasks, setIsSuggestingTasks] = React.useState(false);
@@ -382,19 +384,13 @@ function NewTaskSheet({
     }
   }, [userLocation, title, locationName, locationSuggestions.length, showLocationSuggestions]);
 
-  const handleMapIconClick = React.useCallback(async () => {
-    if (userLocation) {
-      const query = title || (locationName || 'place');
-      fetchLocationSuggestions(query);
-    } else {
-      toast({
-        title: "Location Needed",
-        description: "Please enable location services to use this feature.",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  }, [userLocation, title, locationName, fetchLocationSuggestions, toast]);
+  const handleLocationSelect = (latLng: { lat: number; lng: number }) => {
+    const latLonStr = `${latLng.lat},${latLng.lng}`;
+    setLocation(latLonStr);
+    setLocationName(`Custom location (${latLng.lat.toFixed(4)}, ${latLng.lng.toFixed(4)})`);
+    setIsLocationPickerOpen(false);
+  };
+
 
   const handleSubmit = async () => {
     if (!title || !dueDate) {
@@ -471,6 +467,7 @@ function NewTaskSheet({
   }, [editingTask, userName])
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
@@ -616,7 +613,7 @@ function NewTaskSheet({
                 <div className="relative w-full">
                   <Input
                     id="location"
-                    placeholder="e.g., Downtown Mall"
+                    placeholder="e.g., Downtown Mall or select on map"
                     value={locationName}
                     onChange={(e) => {
                       setLocationName(e.target.value);
@@ -627,7 +624,7 @@ function NewTaskSheet({
                   />
                   {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
                 </div>
-                 <Button type="button" variant="outline" size="icon" onClick={handleMapIconClick}>
+                 <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationPickerOpen(true)}>
                     <MapPin className="h-4 w-4" />
                     <span className="sr-only">Find on map</span>
                   </Button>
@@ -668,6 +665,15 @@ function NewTaskSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+    {userLocation && (
+        <LocationPicker
+            isOpen={isLocationPickerOpen}
+            onClose={() => setIsLocationPickerOpen(false)}
+            onLocationSelect={handleLocationSelect}
+            currentLocation={userLocation}
+        />
+    )}
+    </>
   );
 }
 
@@ -765,7 +771,7 @@ export default function TasksPage() {
            })
            setUserLocation("12.9716,77.5946"); // Default to Bangalore as a fallback
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
         setUserLocation("12.9716,77.5946");

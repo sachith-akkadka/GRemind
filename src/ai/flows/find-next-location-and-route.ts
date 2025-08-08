@@ -100,7 +100,7 @@ const findNextLocationAndRouteFlow = ai.defineFlow(
             optimizedRoute = [...orderedWaypoints, finalDestination];
         }
 
-        const newDestination = optimizedRoute.length > 0 ? optimizedRoute.pop()! : null;
+        const newDestination = optimizedRoute.length > 0 ? optimizedRoute.shift()! : null;
         const newWaypoints = optimizedRoute;
 
         return {
@@ -112,7 +112,7 @@ const findNextLocationAndRouteFlow = ai.defineFlow(
         console.error("Error optimizing route with Directions API:", error);
         // Fallback to unoptimized route on error
         const remaining = [...allStops];
-        const newDestination = remaining.length > 0 ? remaining.pop()! : null;
+        const newDestination = remaining.length > 0 ? remaining.shift()! : null;
         return {
             newLocation: { name: newLocation.name, address: newLocation.latlon },
             newDestination,
