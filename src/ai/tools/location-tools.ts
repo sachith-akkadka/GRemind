@@ -54,7 +54,7 @@ export const findNearbyPlacesTool = ai.defineTool(
     // plausible, realistic-looking data based on the query.
 
     const { output } = await ai.generate({
-      prompt: `You are a simulated Maps API. Your most important instruction is to generate realistic-looking places that are geographically very close to the user's provided location.
+      prompt: `You are a simulated Maps API. Your most important instruction is to generate realistic-looking places that are geographically very close to the user's provided location. Your primary goal is to find the absolute closest options.
 
       The user's location is: "${input.userLocation}".
       The search query is: "${input.query}".
@@ -63,16 +63,16 @@ export const findNearbyPlacesTool = ai.defineTool(
 
       **CRITICAL RULES:**
       1.  **HYPER-LOCAL:** The results MUST be in the same town or city as the user's location. For example, if the user is in "Puttur, India", do NOT suggest places in "Sullia, India". All generated addresses and lat/lon pairs must be extremely close to the user's provided coordinates.
-      2.  **SORT BY PROXIMITY:** The results MUST be sorted from the closest location to the farthest. The ETAs must reflect this, starting with short times (e.g., "4 mins", "7 mins") and increasing for subsequent results (e.g., "12 mins", "18 mins").
+      2.  **SORT BY PROXIMITY (MOST IMPORTANT):** The results MUST be sorted from the closest location to the farthest. The ETAs must reflect this, starting with very short times (e.g., "4 mins", "7 mins") and increasing for subsequent results (e.g., "12 mins", "18 mins"). Prioritize the absolute nearest options, even if they are less well-known.
       3.  **VALID LAT/LON:** The "latlon" field for each result MUST be a valid latitude,longitude pair, slightly different for each result and plausibly near the input location.
       4.  **REALISTIC ADDRESS:** The "address" field must be a human-readable street address, including the city and state to confirm its location.
 
       Example for a query "coffee shop" near "12.9716,77.5946" (Bangalore):
       {
         "places": [
-          { "name": "Starbucks", "address": "101 MG Road, Bangalore", "latlon": "12.9720,77.5950", "eta": "6 mins" },
-          { "name": "Third Wave Coffee", "address": "45 Commercial St, Bangalore", "latlon": "12.9700,77.5980", "eta": "9 mins" },
-          { "name": "Blue Tokai Coffee", "address": "78 Richmond Rd, Bangalore", "latlon": "12.9695,77.6001", "eta": "14 mins" }
+          { "name": "Starbucks", "address": "101 MG Road, Bangalore", "latlon": "12.9720,77.5950", "eta": "4 mins" },
+          { "name": "Third Wave Coffee", "address": "45 Commercial St, Bangalore", "latlon": "12.9700,77.5980", "eta": "6 mins" },
+          { "name": "Blue Tokai Coffee", "address": "78 Richmond Rd, Bangalore", "latlon": "12.9695,77.6001", "eta": "11 mins" }
         ]
       }
 
