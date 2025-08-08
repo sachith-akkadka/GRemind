@@ -11,6 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { findTaskLocation } from './find-task-location';
+import { firebaseConfig } from '@/lib/firebase';
 
 
 const FindNextLocationAndRouteInputSchema = z.object({
@@ -55,44 +56,63 @@ const findNextLocationAndRouteFlow = ai.defineFlow(
     if (!newLocation) {
         // Could not find an alternative, so just route to the next available stop.
         const remaining = [...input.remainingDestinations];
-        const newDestination = remaining.pop() || null;
+        const newDestination = remaining.length > 0 ? remaining.pop()! : null;
+        const newWaypoints = remaining;
         return {
             newLocation: null,
             newDestination,
-            newWaypoints: remaining,
+            newWaypoints,
         };
     }
     
     const allStops = [...input.remainingDestinations, newLocation.latlon];
 
-    // 2. Ask the LLM to re-optimize the route.
-    // This is a simplified approach. A real-world app would use a Directions Matrix API.
-    const { output } = await ai.generate({
-        prompt: `You are a route optimization expert. Given a user's current location and a list of stops (as lat,lon pairs) they need to make, determine the most efficient order to visit them. The last stop in your optimized list will be the final destination.
+    // 2. Use Google Directions API to optimize the route.
+    const directionsUrl = new URL('https://maps.googleapis.com/maps/api/directions/json');
+    directionsUrl.searchParams.set('origin', input.userLocation);
+    directionsUrl.searchParams.set('destination', allStops[allStops.length - 1]);
+    
+    if (allStops.length > 1) {
+        const waypoints = allStops.slice(0, -1);
+        directionsUrl.searchParams.set('waypoints', `optimize:true|${waypoints.join('|')}`);
+    }
+    
+    directionsUrl.searchParams.set('key', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey);
+    
+    try {
+        const response = await fetch(directionsUrl.toString());
+        const data = await response.json();
 
-User's Current Location: ${input.userLocation}
-List of Stops (in no particular order): ${allStops.join('; ')}
+        let optimizedRoute = allStops;
+        if (data.status === 'OK' && data.routes && data.routes[0]) {
+            const route = data.routes[0];
+            const waypointOrder = route.waypoint_order;
+            
+            const unoptimizedWaypoints = allStops.slice(0, -1);
+            const finalDestination = allStops[allStops.length - 1];
 
-Please provide the optimized list of stops as a simple array of strings in a JSON object. The last item in the array is the final destination, and the rest are waypoints.
-Example Response: { "optimizedRoute": ["lat1,lon1", "lat2,lon2", "lat3,lon3"] }
-`,
-        output: {
-            format: 'json',
-            schema: z.object({
-                optimizedRoute: z.array(z.string()),
-            }),
+            const orderedWaypoints = waypointOrder.map((index: number) => unoptimizedWaypoints[index]);
+            optimizedRoute = [...orderedWaypoints, finalDestination];
         }
-    });
-    
-    const optimizedRoute = output?.optimizedRoute || allStops;
-    
-    const newDestination = optimizedRoute.pop() || null;
-    const newWaypoints = optimizedRoute;
 
-    return {
-      newLocation: { name: newLocation.name, address: newLocation.latlon },
-      newDestination,
-      newWaypoints,
-    };
+        const newDestination = optimizedRoute.length > 0 ? optimizedRoute.pop()! : null;
+        const newWaypoints = optimizedRoute;
+
+        return {
+          newLocation: { name: newLocation.name, address: newLocation.latlon },
+          newDestination,
+          newWaypoints,
+        };
+    } catch (error) {
+        console.error("Error optimizing route with Directions API:", error);
+        // Fallback to unoptimized route on error
+        const remaining = [...allStops];
+        const newDestination = remaining.length > 0 ? remaining.pop()! : null;
+        return {
+            newLocation: { name: newLocation.name, address: newLocation.latlon },
+            newDestination,
+            newWaypoints: remaining,
+        };
+    }
   }
 );

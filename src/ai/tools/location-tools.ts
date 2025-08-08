@@ -1,15 +1,16 @@
 
 'use server';
 /**
- * @fileOverview A simulated location services tool for Genkit.
+ * @fileOverview A location services tool for Genkit that uses the Google Maps Places API.
  *
- * This file defines a Genkit tool that simulates fetching nearby places and
- * calculating ETAs, mimicking a real-world Maps API for the prototype.
+ * This file defines a Genkit tool that fetches real nearby places and
+ * calculates ETAs using the Google Maps Platform.
  *
  * - findNearbyPlacesTool - A tool that finds nearby places based on a query and location.
  */
 
 import { ai } from '@/ai/genkit';
+import { firebaseConfig } from '@/lib/firebase';
 import { z } from 'zod';
 
 // Define the schema for the tool's input
@@ -31,7 +32,7 @@ const NearbyPlacesOutputSchema = z.object({
   places: z.array(
     z.object({
       name: z.string().describe('The name of the business or landmark.'),
-      address: z.string().describe('A plausible street address for the location (e.g., "123 Main St, Anytown, State, ZIP").'),
+      address: z.string().describe('The human-readable address of the location.'),
       latlon: z.string().describe('The latitude,longitude pair of the location.'),
       eta: z
         .string()
@@ -45,46 +46,57 @@ export const findNearbyPlacesTool = ai.defineTool(
   {
     name: 'findNearbyPlacesTool',
     description:
-      "Finds nearby places like businesses or landmarks based on a user's query and current location. It provides an estimated time of arrival (ETA) for each, ordered from closest to farthest.",
+      "Finds nearby places like businesses or landmarks using the Google Places API based on a user's query and current location. It provides an estimated time of arrival (ETA) for each, ordered from closest to farthest.",
     inputSchema: NearbyPlacesInputSchema,
     outputSchema: NearbyPlacesOutputSchema,
   },
   async (input) => {
-    // In a real application, this is where you would call a real Maps API.
-    // For this prototype, we'll use another LLM call to generate
-    // plausible, realistic-looking data based on the query.
+    // 1. Find Nearby Places using Places API
+    const placesUrl = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
+    placesUrl.searchParams.set('location', input.userLocation);
+    placesUrl.searchParams.set('rankby', 'distance');
+    placesUrl.searchParams.set('keyword', input.query);
+    placesUrl.searchParams.set('key', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey);
 
-    const { output } = await ai.generate({
-      prompt: `You are a simulated Maps API. Your most important instruction is to generate realistic-looking places that are geographically very close to the user's provided location. Your primary goal is to find the absolute closest options.
+    const placesResponse = await fetch(placesUrl.toString());
+    const placesData = await placesResponse.json();
 
-      The user's location is: "${input.userLocation}".
-      The search query is: "${input.query}".
+    if (placesData.status !== 'OK' || !placesData.results || placesData.results.length === 0) {
+      return { places: [] };
+    }
 
-      Generate a list of 3 to 5 plausible, real-world business names that match the query.
+    // Take top 5 results
+    const nearbyPlaces = placesData.results.slice(0, 5).map((place: any) => ({
+      name: place.name,
+      address: place.vicinity,
+      latlon: `${place.geometry.location.lat},${place.geometry.location.lng}`,
+    }));
+    
+    // 2. Get ETAs using Distance Matrix API
+    const matrixUrl = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
+    matrixUrl.searchParams.set('origins', input.userLocation);
+    matrixUrl.searchParams.set('destinations', nearbyPlaces.map((p: any) => p.latlon).join('|'));
+    matrixUrl.searchParams.set('key', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey);
+    
+    const matrixResponse = await fetch(matrixUrl.toString());
+    const matrixData = await matrixResponse.json();
 
-      **CRITICAL RULES:**
-      1.  **HYPER-LOCAL:** The results MUST be in the same town or city as the user's location. For example, if the user is in "Puttur, India", do NOT suggest places in "Sullia, India". All generated addresses and lat/lon pairs must be extremely close to the user's provided coordinates.
-      2.  **SORT BY PROXIMITY (MOST IMPORTANT):** The results MUST be sorted from the closest location to the farthest. The ETAs must reflect this, starting with very short times (e.g., "4 mins", "7 mins") and increasing for subsequent results (e.g., "12 mins", "18 mins"). Prioritize the absolute nearest options, even if they are less well-known.
-      3.  **VALID LAT/LON:** The "latlon" field for each result MUST be a valid latitude,longitude pair, slightly different for each result and plausibly near the input location.
-      4.  **REALISTIC ADDRESS:** The "address" field must be a human-readable street address, including the city and state to confirm its location.
+    if (matrixData.status !== 'OK') {
+        // If distance matrix fails, return places without ETA
+        return {
+            places: nearbyPlaces.map((p: any) => ({ ...p, eta: 'N/A' }))
+        };
+    }
 
-      Example for a query "coffee shop" near "12.9716,77.5946" (Bangalore):
-      {
-        "places": [
-          { "name": "Starbucks", "address": "101 MG Road, Bangalore", "latlon": "12.9720,77.5950", "eta": "4 mins" },
-          { "name": "Third Wave Coffee", "address": "45 Commercial St, Bangalore", "latlon": "12.9700,77.5980", "eta": "6 mins" },
-          { "name": "Blue Tokai Coffee", "address": "78 Richmond Rd, Bangalore", "latlon": "12.9695,77.6001", "eta": "11 mins" }
-        ]
-      }
-
-      Return ONLY the valid JSON object with a "places" array. Do not add any commentary.`,
-      model: 'googleai/gemini-2.0-flash',
-      output: {
-        format: 'json',
-        schema: NearbyPlacesOutputSchema,
-      },
+    const finalPlaces = nearbyPlaces.map((place: any, index: number) => {
+        const element = matrixData.rows[0].elements[index];
+        const eta = element.status === 'OK' ? element.duration.text : 'N/A';
+        return {
+            ...place,
+            eta,
+        };
     });
 
-    return output ?? { places: [] };
+    return { places: finalPlaces };
   }
 );

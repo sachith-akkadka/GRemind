@@ -9,6 +9,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { firebaseConfig } from '@/lib/firebase';
+
 
 export const RerouteInputSchema = z.object({
   userLocation: z.string().describe("The user's current location as a latitude,longitude pair."),
@@ -40,31 +42,44 @@ const rerouteFlow = ai.defineFlow(
         return { optimizedRoute: input.destinations };
     }
     
-    // Ask the LLM to re-optimize the route from the new current location.
-    // This is a simplified approach. A real-world app would use a Directions Matrix API
-    // for more accurate and robust route optimization.
-    const { output } = await ai.generate({
-        prompt: `You are a route optimization expert. Given a user's current location and a list of stops (as lat,lon pairs) they need to make, determine the most efficient order to visit them. The last stop in your optimized list will be the final destination.
+    // Use the Google Directions API to optimize the route.
+    const directionsUrl = new URL('https://maps.googleapis.com/maps/api/directions/json');
+    directionsUrl.searchParams.set('origin', input.userLocation);
+    // The last destination in the unoptimized list will be the final destination
+    directionsUrl.searchParams.set('destination', input.destinations[input.destinations.length - 1]);
+    
+    // The other destinations are waypoints. The API supports optimizing the order.
+    if (input.destinations.length > 1) {
+        const waypoints = input.destinations.slice(0, -1);
+        directionsUrl.searchParams.set('waypoints', `optimize:true|${waypoints.join('|')}`);
+    }
 
-User's Current Location: ${input.userLocation}
-List of Stops to Visit (in no particular order): ${input.destinations.join('; ')}
+    directionsUrl.searchParams.set('key', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || firebaseConfig.apiKey);
 
-Please provide the optimized list of stops as a simple array of strings in a JSON object. The last item in the array is the final destination, and the rest are waypoints.
-Example Response: { "optimizedRoute": ["lat1,lon1", "lat2,lon2", "lat3,lon3"] }
-`,
-        output: {
-            format: 'json',
-            schema: z.object({
-                optimizedRoute: z.array(z.string()),
-            }),
+    try {
+        const response = await fetch(directionsUrl.toString());
+        const data = await response.json();
+
+        if (data.status === 'OK' && data.routes && data.routes[0]) {
+            const route = data.routes[0];
+            const waypointOrder = route.waypoint_order;
+            
+            const unoptimizedWaypoints = input.destinations.slice(0, -1);
+            const finalDestination = input.destinations[input.destinations.length - 1];
+
+            // Reconstruct the route in the optimized order
+            const optimizedWaypoints = waypointOrder.map((index: number) => unoptimizedWaypoints[index]);
+            const optimizedRoute = [...optimizedWaypoints, finalDestination];
+
+            return { optimizedRoute };
+        } else {
+            // Fallback to the original order if API fails
+            return { optimizedRoute: input.destinations };
         }
-    });
-    
-    // Fallback in case the LLM fails to return a valid route
-    const optimizedRoute = output?.optimizedRoute || input.destinations;
-    
-    return {
-      optimizedRoute,
-    };
+    } catch (error) {
+        console.error("Directions API error:", error);
+        // Fallback in case of fetch error
+        return { optimizedRoute: input.destinations };
+    }
   }
 );
