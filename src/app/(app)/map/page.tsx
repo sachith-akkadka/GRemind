@@ -12,7 +12,7 @@ import { reroute, RerouteInput, RerouteOutput } from '@/ai/flows/reroute-flow';
 
 const Map = dynamic(() => import("@/components/Map"), { 
     ssr: false,
-    loading: () => <p>Loading map...</p>
+    loading: () => <div className="h-[60vh] w-full bg-muted rounded-lg flex items-center justify-center"><p>Loading map...</p></div>
 });
 
 export default function MapPage() {
@@ -20,20 +20,26 @@ export default function MapPage() {
     const searchParams = useSearchParams();
     const { toast } = useToast();
 
-    const [origin, setOrigin] = useState<string | null>(searchParams.get('origin'));
-    const [destination, setDestination] = useState<string | null>(searchParams.get('destination'));
-    const [waypoints, setWaypoints] = useState<{ location: string }[]>(searchParams.getAll('waypoints').map(w => ({ location: w })));
+    const [origin, setOrigin] = useState<string | null>(null);
+    const [destination, setDestination] = useState<string | null>(null);
+    const [waypoints, setWaypoints] = useState<{ location: string }[]>([]);
     const [userLocation, setUserLocation] = useState<string | null>(null);
     const [isRecalculating, setIsRecalculating] = useState(false);
 
     useEffect(() => {
+        // Set state from URL params on initial load
+        setOrigin(searchParams.get('origin'));
+        setDestination(searchParams.get('destination'));
+        setWaypoints(searchParams.getAll('waypoints').map(w => ({ location: w })));
+
+        // Get user's current location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     const newLocation = `${latitude},${longitude}`;
                     setUserLocation(newLocation);
-                    // Set initial origin to user's location if not provided in params
+                    // Set origin to user's location if it's not already in the URL
                     if (!searchParams.get('origin')) {
                         setOrigin(newLocation);
                     }
@@ -47,16 +53,30 @@ export default function MapPage() {
                         duration: 3000,
                     });
                 },
-                { enableHighAccuracy: true } // Request high accuracy
+                { enableHighAccuracy: true }
             );
         }
-    }, [toast, searchParams]);
+    }, [searchParams, toast]);
 
     const handleRecalculateRoute = useCallback(async () => {
-        if (!userLocation || !destination) {
+        if (!userLocation) {
             toast({
                 title: 'Cannot Recalculate',
-                description: 'Your current location or a destination is missing.',
+                description: 'Your current location is missing.',
+                variant: 'destructive',
+                duration: 3000,
+            });
+            return;
+        }
+
+        const currentStops = [
+            ...(waypoints?.map(wp => wp.location) || []),
+            ...(destination ? [destination] : [])
+        ];
+
+        if (currentStops.length === 0) {
+            toast({
+                title: 'No destinations to route to.',
                 variant: 'destructive',
                 duration: 3000,
             });
@@ -66,12 +86,10 @@ export default function MapPage() {
         setIsRecalculating(true);
         toast({ title: 'Re-optimizing your route...', duration: 3000 });
 
-        const allDestinations = [...waypoints.map(wp => wp.location), destination];
-
         try {
             const result = await reroute({
                 userLocation: userLocation,
-                destinations: allDestinations,
+                destinations: currentStops,
             });
 
             if (result.optimizedRoute && result.optimizedRoute.length > 0) {
@@ -79,12 +97,7 @@ export default function MapPage() {
                 const newDestination = newOptimizedRoute.pop()!;
                 const newWaypoints = newOptimizedRoute;
 
-                // Update state to re-render the map
-                setOrigin(userLocation);
-                setDestination(newDestination);
-                setWaypoints(newWaypoints.map(wp => ({ location: wp })));
-
-                // Update URL without reloading the page
+                // Update URL to reflect the new, optimized route
                 const params = new URLSearchParams();
                 params.set('origin', userLocation);
                 params.set('destination', newDestination);
@@ -111,7 +124,7 @@ export default function MapPage() {
         <div>
             <CardTitle>Your Task Map</CardTitle>
             <CardDescription>
-                {destination ? "Showing route to your destination." : "A map of your task locations."}
+                {destination ? "Showing the optimized route to your destinations." : "Your current location."}
             </CardDescription>
         </div>
          {destination && (
@@ -125,12 +138,12 @@ export default function MapPage() {
                 ) : (
                     <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Recalculate Route
+                Recalculate From My Location
             </Button>
          )}
       </CardHeader>
       <CardContent>
-        <div className="h-[60vh] rounded-lg overflow-hidden">
+        <div className="h-[60vh] rounded-lg overflow-hidden border">
           <Map origin={origin} destination={destination} waypoints={waypoints}/>
         </div>
       </CardContent>

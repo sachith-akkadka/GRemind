@@ -706,7 +706,7 @@ export default function TasksPage() {
         if (!task || !task.store || !userLocation) return;
         
         if (event.action === 'yes') {
-            handleUpdateTask(task.id, { status: 'completed', completedAt: Timestamp.now() });
+            await handleUpdateTask(task.id, { status: 'completed', completedAt: Timestamp.now() });
             toast({ title: 'Task Completed', description: `"${task.title}" marked as done.`, duration: 3000});
         } else if (event.action === 'no') {
             toast({ title: 'Re-routing...', description: `Finding a new location for "${task.title}".`, duration: 3000});
