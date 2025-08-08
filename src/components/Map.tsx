@@ -19,9 +19,22 @@ interface MapProps {
 const libraries: ('places' | 'directions')[] = ['places', 'directions'];
 
 const Map = ({ origin, destination, waypoints }: MapProps) => {
+    // State to hold the API key, ensuring it's available client-side
+    const [apiKey, setApiKey] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        // This effect runs only on the client, after hydration
+        setApiKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+    }, []);
+
     const { isLoaded, loadError } = useJsApiLoader({
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        googleMapsApiKey: apiKey || "",
         libraries,
+        // prevent the script from loading until the API key is set
+        preventGoogleFontsLoading: true,
+        id: 'google-map-script',
+        // Only attempt to load the script if the API key is present
+        disabled: !apiKey,
     });
 
     const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Default center
@@ -42,6 +55,8 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
     }, [origin]);
 
     useEffect(() => {
+        // Reset directions when route changes
+        setDirectionsResponse(null);
         if (!isLoaded || !origin || !destination) return;
 
         const directionsService = new window.google.maps.DirectionsService();
@@ -61,11 +76,19 @@ const Map = ({ origin, destination, waypoints }: MapProps) => {
             }
         );
     }, [isLoaded, origin, destination, waypoints]);
+    
+    if (!apiKey) {
+        return (
+            <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive">
+                Google Maps API Key not found. Please check your environment configuration.
+            </div>
+        )
+    }
 
     if (loadError) {
         return (
             <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive">
-                Error loading maps. Please check the API key and console for more details.
+                Error loading maps. Please check the API key, console, and ensure it is not restricted.
             </div>
         )
     }
