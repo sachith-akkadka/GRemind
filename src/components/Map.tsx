@@ -4,6 +4,7 @@
 import { LoadScript, GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
+import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES } from '@/lib/google-maps';
 
 const mapContainerStyle = {
   width: "100%",
@@ -15,8 +16,6 @@ interface MapProps {
     destination?: string | null;
     waypoints?: { location: string }[] | null;
 }
-
-const libraries: ('places')[] = ['places'];
 
 const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
     const [directionsResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null);
@@ -39,27 +38,28 @@ const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
     }, [origin]);
 
     useEffect(() => {
-        if (origin && destination && window.google) {
-            const directionsService = new window.google.maps.DirectionsService();
-            directionsService.route(
-                {
-                    origin: origin,
-                    destination: destination,
-                    waypoints: waypoints?.map(wp => ({ location: wp.location, stopover: true })),
-                    travelMode: window.google.maps.TravelMode.DRIVING,
-                },
-                (result, status) => {
-                    if (status === window.google.maps.DirectionsStatus.OK) {
-                        setDirectionsResponse(result);
-                    } else {
-                        console.error(`Error fetching directions: ${status}`);
-                        setDirectionsResponse(null);
-                    }
-                }
-            );
-        } else {
+        if (!origin || !destination || typeof window === 'undefined' || !window.google) {
             setDirectionsResponse(null);
+            return;
         }
+        
+        const directionsService = new window.google.maps.DirectionsService();
+        directionsService.route(
+            {
+                origin: origin,
+                destination: destination,
+                waypoints: waypoints?.map(wp => ({ location: wp.location, stopover: true })),
+                travelMode: window.google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+                if (status === window.google.maps.DirectionsStatus.OK) {
+                    setDirectionsResponse(result);
+                } else {
+                    console.error(`Error fetching directions: ${status}`);
+                    setDirectionsResponse(null);
+                }
+            }
+        );
     }, [origin, destination, waypoints]);
 
     return (
@@ -85,9 +85,7 @@ const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
 };
 
 const Map = (props: MapProps) => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-    if (!apiKey) {
+    if (!GOOGLE_MAPS_API_KEY) {
       return (
             <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive text-center p-4">
                 <div>
@@ -100,8 +98,8 @@ const Map = (props: MapProps) => {
 
     return (
         <LoadScript
-            googleMapsApiKey={apiKey}
-            libraries={libraries}
+            googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+            libraries={GOOGLE_MAPS_LIBRARIES}
             loadingElement={<Skeleton className="h-full w-full" />}
             onError={(error) => console.error("Map script load error:", error)}
         >
