@@ -9,3 +9,4 @@ import '@/ai/flows/suggest-tasks.ts';
 import '@/ai/tools/location-tools.ts';
 import '@/ai/flows/find-task-location.ts';
 import '@/ai/flows/find-next-location-and-route.ts';
+import '@/ai/flows/reroute-flow.ts';
