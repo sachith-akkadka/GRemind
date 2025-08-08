@@ -362,19 +362,23 @@ function NewTaskSheet({
 
   const handleLocationFocus = React.useCallback(async () => {
     if (userLocation) {
-      if (locationSuggestions.length === 0 || locationName === '') {
-        setIsSuggestingLocations(true);
-        try {
-            const result = await suggestLocations({ query: title || '', userLocation });
-            setLocationSuggestions(result.suggestions);
-        } catch (error) {
-            console.error("Failed to fetch contextual location suggestions:", error);
-        } finally {
-            setIsSuggestingLocations(false);
+        if (!locationName && (locationSuggestions.length === 0 || !showLocationSuggestions)) {
+            setIsSuggestingLocations(true);
+            try {
+                // Use task title as query if available, otherwise fetch general nearby places
+                const result = await suggestLocations({ query: title || 'place', userLocation });
+                setLocationSuggestions(result.suggestions);
+                setShowLocationSuggestions(true);
+            } catch (error) {
+                console.error("Failed to fetch contextual location suggestions:", error);
+            } finally {
+                setIsSuggestingLocations(false);
+            }
+        } else if (locationName) {
+            setShowLocationSuggestions(true);
         }
-      }
     }
-  }, [userLocation, title, locationName, locationSuggestions.length]);
+  }, [userLocation, title, locationName, locationSuggestions.length, showLocationSuggestions]);
 
   const handleMapIconClick = () => {
     if (userLocation) {
@@ -429,7 +433,6 @@ function NewTaskSheet({
       category: category,
     });
     
-    // Ensure the category of the submitted task is in the filter
     onFilterChange(category, true);
 
     onOpenChange(false);
@@ -447,7 +450,7 @@ function NewTaskSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
           <div className="flex justify-between items-center">
             <SheetTitle>
@@ -459,178 +462,180 @@ function NewTaskSheet({
             {greeting}
           </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2 relative">
-            <Label htmlFor="title">Task Title</Label>
-              <div className="relative">
-                <Input
-                  id="title"
-                  placeholder="e.g., Buy groceries"
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    if (!showTaskSuggestions) setShowTaskSuggestions(true);
-                  }}
-                  autoComplete="off"
-                />
-                {isSuggestingTasks && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-              </div>
-            {taskSuggestions.length > 0 && showTaskSuggestions && (
-              <div className="absolute z-20 w-full bg-card border rounded-md shadow-lg mt-1 top-full">
-                {taskSuggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                        setTitle(s);
-                        setShowTaskSuggestions(false);
+        <div className="flex-1 overflow-y-auto -mr-6 pr-6">
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2 relative">
+              <Label htmlFor="title">Task Title</Label>
+                <div className="relative">
+                  <Input
+                    id="title"
+                    placeholder="e.g., Buy groceries"
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      if (!showTaskSuggestions) setShowTaskSuggestions(true);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea
-              id="description"
-              placeholder="Add any extra details here..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={'outline'}
-                    className={cn(
-                      'justify-start text-left font-normal',
-                      !dueDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    initialFocus
+                    autoComplete="off"
                   />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid gap-2">
-              <Label>Time</Label>
-              <div className="flex items-center gap-2">
-                <Select value={hour} onValueChange={setHour}>
-                  <SelectTrigger className="w-1/3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <SelectItem
-                        key={i + 1}
-                        value={(i + 1).toString().padStart(2, '0')}
-                      >
-                        {(i + 1).toString().padStart(2, '0')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={minute} onValueChange={setMinute}>
-                  <SelectTrigger className="w-1/3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['00', '15', '30', '45'].map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {m}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={ampm} onValueChange={setAmpm}>
-                  <SelectTrigger className="w-1/3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="AM">AM</SelectItem>
-                    <SelectItem value="PM">PM</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-           <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger id="category">
-                        <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {categories.map(cat => (
-                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-           <div className="grid gap-2 relative">
-            <Label htmlFor="location">Location (Optional)</Label>
-            <div className="flex items-center gap-2">
-              <div className="relative w-full">
-                <Input
-                  id="location"
-                  placeholder="e.g., Downtown Mall"
-                  value={locationName}
-                  onChange={(e) => {
-                    setLocationName(e.target.value);
-                    if (!showLocationSuggestions) setShowLocationSuggestions(true);
-                  }}
-                  onFocus={handleLocationFocus}
-                  autoComplete="off"
-                />
-                {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-              </div>
-               <Button type="button" variant="outline" size="icon" onClick={handleMapIconClick}>
-                  <MapPin className="h-4 w-4" />
-                  <span className="sr-only">Find on map</span>
-                </Button>
-            </div>
-              {locationSuggestions.length > 0 && showLocationSuggestions && (
-                <div className="absolute z-10 w-full bg-card border rounded-md shadow-lg mt-1 top-full max-h-48 overflow-y-auto">
-                  {locationSuggestions.map((suggestion, index) => (
-                    <div
-                      key={index}
-                      className="p-3 hover:bg-muted cursor-pointer border-b"
+                  {isSuggestingTasks && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                </div>
+              {taskSuggestions.length > 0 && showTaskSuggestions && (
+                <div className="absolute z-20 w-full bg-card border rounded-md shadow-lg mt-1 top-full">
+                  {taskSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
                       onClick={() => {
-                        setLocation(suggestion.address); // The lat,lon string
-                        setLocationName(suggestion.name); // The readable name
-                        setShowLocationSuggestions(false);
+                          setTitle(s);
+                          setShowTaskSuggestions(false);
                       }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted"
                     >
-                      <p className="font-semibold">{suggestion.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {suggestion.address}
-                      </p>
-                      <p className="text-xs text-primary font-medium">
-                        {suggestion.eta} away
-                      </p>
-                    </div>
+                      {s}
+                    </button>
                   ))}
                 </div>
               )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                placeholder="Add any extra details here..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={'outline'}
+                      className={cn(
+                        'justify-start text-left font-normal',
+                        !dueDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="grid gap-2">
+                <Label>Time</Label>
+                <div className="flex items-center gap-2">
+                  <Select value={hour} onValueChange={setHour}>
+                    <SelectTrigger className="w-1/3">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <SelectItem
+                          key={i + 1}
+                          value={(i + 1).toString().padStart(2, '0')}
+                        >
+                          {(i + 1).toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={minute} onValueChange={setMinute}>
+                    <SelectTrigger className="w-1/3">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {['00', '15', '30', '45'].map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={ampm} onValueChange={setAmpm}>
+                    <SelectTrigger className="w-1/3">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="PM">PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+             <div className="grid gap-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger id="category">
+                          <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {categories.map(cat => (
+                              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
+             <div className="grid gap-2 relative">
+              <Label htmlFor="location">Location (Optional)</Label>
+              <div className="flex items-center gap-2">
+                <div className="relative w-full">
+                  <Input
+                    id="location"
+                    placeholder="e.g., Downtown Mall"
+                    value={locationName}
+                    onChange={(e) => {
+                      setLocationName(e.target.value);
+                      if (!showLocationSuggestions) setShowLocationSuggestions(true);
+                    }}
+                    onFocus={handleLocationFocus}
+                    autoComplete="off"
+                  />
+                  {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                </div>
+                 <Button type="button" variant="outline" size="icon" onClick={handleMapIconClick}>
+                    <MapPin className="h-4 w-4" />
+                    <span className="sr-only">Find on map</span>
+                  </Button>
+              </div>
+                {locationSuggestions.length > 0 && showLocationSuggestions && (
+                  <div className="absolute z-10 w-full bg-card border rounded-md shadow-lg mt-1 top-full max-h-48 overflow-y-auto">
+                    {locationSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="p-3 hover:bg-muted cursor-pointer border-b"
+                        onClick={() => {
+                          setLocation(suggestion.address); // The lat,lon string
+                          setLocationName(suggestion.name); // The readable name
+                          setShowLocationSuggestions(false);
+                        }}
+                      >
+                        <p className="font-semibold">{suggestion.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {suggestion.address}
+                        </p>
+                        <p className="text-xs text-primary font-medium">
+                          {suggestion.eta} away
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
           </div>
         </div>
-        <SheetFooter>
+        <SheetFooter className="mt-auto">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
