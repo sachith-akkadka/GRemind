@@ -121,6 +121,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
      toast({
       title: "Task Completed!",
       description: `"${task.title}" has been moved to completed.`,
+      duration: 3000,
     });
   };
   
@@ -683,7 +684,7 @@ export default function TasksPage() {
         
         if (event.action === 'yes') {
             handleUpdateTask(task.id, { status: 'completed', completedAt: Timestamp.now() });
-            toast({ title: 'Task Completed', description: `"${task.title}" marked as done.`});
+            toast({ title: 'Task Completed', description: `"${task.title}" marked as done.`, duration: 3000});
         } else if (event.action === 'no') {
             toast({ title: 'Re-routing...', description: `Finding a new location for "${task.title}".`});
             
@@ -699,7 +700,7 @@ export default function TasksPage() {
 
             if (result.newLocation) {
                  await handleUpdateTask(task.id, { store: result.newLocation.address, storeName: result.newLocation.name });
-                 toast({ title: 'New Location Found!', description: `Headed to ${result.newLocation.name}.`});
+                 toast({ title: 'New Location Found!', description: `Headed to ${result.newLocation.name}.`, duration: 3000});
             } else {
                 toast({ title: 'No other locations found', variant: 'destructive'});
             }
@@ -725,7 +726,7 @@ export default function TasksPage() {
   React.useEffect(() => {
     requestNotificationPermission().then(granted => {
         if (granted) {
-            toast({ title: "Notifications enabled!", description: "You'll receive reminders for your tasks." });
+            toast({ title: "Notifications enabled!", description: "You'll receive reminders for your tasks.", duration: 3000 });
         } else {
             toast({ title: "Notifications blocked", description: "You won't receive task reminders. You can enable them in your browser settings.", variant: "destructive" });
         }
@@ -903,13 +904,13 @@ export default function TasksPage() {
         if (id) {
             const taskRef = doc(db, 'tasks', id);
             await updateDoc(taskRef, data as any);
-            toast({ title: "Task Updated", description: `"${data.title}" has been updated.` });
+            toast({ title: "Task Updated", description: `"${data.title}" has been updated.`, duration: 3000 });
         } else { 
             await addDoc(collection(db, 'tasks'), {
                 ...data,
                 userId: user.uid,
             });
-            toast({ title: "Task Created", description: `"${data.title}" has been added to your list.` });
+            toast({ title: "Task Created", description: `"${data.title}" has been added to your list.`, duration: 3000 });
         }
     } catch (error) {
         console.error("Error submitting task:", error);
@@ -934,6 +935,7 @@ export default function TasksPage() {
         toast({
             title: "Task Deleted",
             description: "The task has been permanently deleted.",
+            duration: 3000,
         });
     } catch (error) {
         console.error("Error deleting task:", error);
@@ -1152,4 +1154,5 @@ export default function TasksPage() {
     </>
   );
 }
+
 
