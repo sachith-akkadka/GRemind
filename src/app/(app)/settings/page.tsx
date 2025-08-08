@@ -108,9 +108,9 @@ export default function SettingsPage() {
                 aiReschedule,
                 weeklyReport
             }, { merge: true });
-            toast({ title: "Preferences Saved", description: "Your settings have been updated." });
+            toast({ title: "Preferences Saved", description: "Your settings have been updated.", duration: 3000 });
         } catch (error) {
-            toast({ title: "Error Saving Preferences", variant: "destructive" });
+            toast({ title: "Error Saving Preferences", variant: "destructive", duration: 3000 });
         } finally {
             setIsSavingPrefs(false);
         }
@@ -123,16 +123,16 @@ export default function SettingsPage() {
             const q = query(collection(db, 'tasks'), where('userId', '==', user.uid), where('status', '==', 'completed'));
             const snapshot = await getDocs(q);
             if(snapshot.empty) {
-                toast({ title: "No completed tasks to clear."});
+                toast({ title: "No completed tasks to clear.", duration: 3000});
                 return;
             }
             snapshot.forEach(doc => {
                 batch.delete(doc.ref);
             });
             await batch.commit();
-            toast({ title: "History Cleared", description: "All completed tasks have been deleted." });
+            toast({ title: "History Cleared", description: "All completed tasks have been deleted.", duration: 3000 });
         } catch (error) {
-            toast({ title: "Error Clearing History", description: "Could not clear task history.", variant: "destructive" });
+            toast({ title: "Error Clearing History", description: "Could not clear task history.", variant: "destructive", duration: 3000 });
         }
     };
     
@@ -144,7 +144,7 @@ export default function SettingsPage() {
             const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
             if(tasks.length === 0) {
-                toast({ title: "No Data to Export", description: "You don't have any tasks to export." });
+                toast({ title: "No Data to Export", description: "You don't have any tasks to export.", duration: 3000 });
                 return;
             }
 
@@ -158,10 +158,10 @@ export default function SettingsPage() {
             linkElement.setAttribute('download', exportFileDefaultName);
             linkElement.click();
             
-            toast({ title: "Export Successful", description: "Your data has been exported." });
+            toast({ title: "Export Successful", description: "Your data has been exported.", duration: 3000 });
 
         } catch (error) {
-            toast({ title: "Error Exporting Data", description: "Could not export your tasks.", variant: "destructive" });
+            toast({ title: "Error Exporting Data", description: "Could not export your tasks.", variant: "destructive", duration: 3000 });
         }
     };
     
@@ -187,14 +187,14 @@ export default function SettingsPage() {
             
             await deleteUser(currentUser);
             
-            toast({ title: "Account Deleted", description: "Your account and all associated data have been permanently deleted." });
+            toast({ title: "Account Deleted", description: "Your account and all associated data have been permanently deleted.", duration: 3000 });
             router.push('/login');
         } catch (error: any) {
             let description = "Could not delete your account.";
             if (error.code === 'auth/requires-recent-login') {
                 description = "This action is sensitive and requires a recent sign-in. Please log out and log back in to delete your account.";
             }
-            toast({ title: "Deletion Failed", description: description, variant: "destructive" });
+            toast({ title: "Deletion Failed", description: description, variant: "destructive", duration: 3000 });
         }
     };
 
@@ -202,13 +202,14 @@ export default function SettingsPage() {
     const handleLogout = async () => {
       try {
         await signOut(auth);
-        toast({ title: "Logged out successfully." });
+        toast({ title: "Logged out successfully.", duration: 3000 });
         router.push('/login');
       } catch (error) {
         toast({
           title: "Logout Failed",
           description: "An error occurred while logging out.",
           variant: "destructive",
+          duration: 3000,
         });
       }
     };
@@ -222,6 +223,7 @@ export default function SettingsPage() {
                 title: "Full Name Required",
                 description: "Please enter both your first and last name.",
                 variant: "destructive",
+                duration: 3000,
             });
             return;
         }
@@ -237,7 +239,7 @@ export default function SettingsPage() {
               setUser(updatedUser);
             }
 
-            toast({ title: "Profile updated successfully!" });
+            toast({ title: "Profile updated successfully!", duration: 3000 });
         } catch(error: any) {
             let description = "Could not update your profile.";
             if (error.code === 'auth/requires-recent-login') {
@@ -249,7 +251,8 @@ export default function SettingsPage() {
             toast({ 
                 title: "Update Failed", 
                 description: description,
-                variant: "destructive" 
+                variant: "destructive",
+                duration: 3000,
             });
         } finally {
             setIsSaving(false);

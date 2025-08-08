@@ -32,13 +32,14 @@ export function UserNav() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      toast({ title: 'Logged out successfully.' });
+      toast({ title: 'Logged out successfully.', duration: 3000 });
       router.push('/login');
     } catch (error) {
       toast({
         title: 'Logout Failed',
         description: 'An error occurred while logging out.',
         variant: 'destructive',
+        duration: 3000,
       });
     }
   };

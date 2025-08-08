@@ -43,7 +43,8 @@ export default function MapPage() {
                     toast({
                         title: "Could not get location",
                         description: "Location features will be limited.",
-                        variant: "destructive"
+                        variant: "destructive",
+                        duration: 3000,
                     });
                 }
             );
@@ -56,12 +57,13 @@ export default function MapPage() {
                 title: 'Cannot Recalculate',
                 description: 'Your current location or a destination is missing.',
                 variant: 'destructive',
+                duration: 3000,
             });
             return;
         }
 
         setIsRecalculating(true);
-        toast({ title: 'Re-optimizing your route...' });
+        toast({ title: 'Re-optimizing your route...', duration: 3000 });
 
         const allDestinations = [...waypoints.map(wp => wp.location), destination];
 
@@ -88,14 +90,14 @@ export default function MapPage() {
                 newWaypoints.forEach(wp => params.append('waypoints', wp));
                 router.replace(`/map?${params.toString()}`);
                 
-                toast({ title: 'Route Recalculated!', description: 'Your map has been updated with the most efficient route.' });
+                toast({ title: 'Route Recalculated!', description: 'Your map has been updated with the most efficient route.', duration: 3000 });
             } else {
-                 toast({ title: 'Could not recalculate', description: 'No new route could be determined.', variant: 'destructive' });
+                 toast({ title: 'Could not recalculate', description: 'No new route could be determined.', variant: 'destructive', duration: 3000 });
             }
 
         } catch (error) {
             console.error('Error recalculating route:', error);
-            toast({ title: 'Recalculation Failed', description: 'An error occurred while re-optimizing.', variant: 'destructive' });
+            toast({ title: 'Recalculation Failed', description: 'An error occurred while re-optimizing.', variant: 'destructive', duration: 3000 });
         } finally {
             setIsRecalculating(false);
         }

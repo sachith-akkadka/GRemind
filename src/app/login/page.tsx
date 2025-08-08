@@ -50,7 +50,7 @@ function LoginPageContent() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: 'Logged in successfully!' });
+      toast({ title: 'Logged in successfully!', duration: 3000 });
       router.push('/tasks');
     } catch (error: any) {
        let description = 'An unexpected error occurred. Please try again.';
@@ -61,6 +61,7 @@ function LoginPageContent() {
         title: 'Login Failed',
         description: description,
         variant: 'destructive',
+        duration: 3000,
       });
     } finally {
       setIsLoading(false);
@@ -77,6 +78,7 @@ function LoginPageContent() {
         title: 'Google Sign-In Failed',
         description: error.message,
         variant: 'destructive',
+        duration: 3000,
       });
        setIsLoading(false);
     }
@@ -84,7 +86,7 @@ function LoginPageContent() {
 
   const handlePasswordReset = async () => {
     if (!resetEmail) {
-        toast({ title: "Email required", description: "Please enter your email address.", variant: "destructive" });
+        toast({ title: "Email required", description: "Please enter your email address.", variant: "destructive", duration: 3000 });
         return;
     }
     setIsResetLoading(true);
@@ -92,7 +94,8 @@ function LoginPageContent() {
         await sendPasswordResetEmail(auth, resetEmail);
         toast({ 
           title: "Check Your Email", 
-          description: `If an account exists for ${resetEmail}, you will receive a password reset link. Please check your spam folder if you don't see it.` 
+          description: `If an account exists for ${resetEmail}, you will receive a password reset link. Please check your spam folder if you don't see it.`,
+          duration: 3000,
         });
         // We close the dialog by finding its close button and clicking it programmatically
         document.getElementById('close-reset-dialog')?.click();
@@ -101,7 +104,8 @@ function LoginPageContent() {
         // So we show a generic message.
         toast({ 
           title: "Check Your Email", 
-          description: `If an account exists for ${resetEmail}, you will receive a password reset link. Please check your spam folder if you don't see it.`
+          description: `If an account exists for ${resetEmail}, you will receive a password reset link. Please check your spam folder if you don't see it.`,
+          duration: 3000,
         });
         document.getElementById('close-reset-dialog')?.click();
     } finally {

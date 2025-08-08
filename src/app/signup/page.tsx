@@ -38,7 +38,7 @@ function SignupPageContent() {
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, { displayName: name });
       }
-      toast({ title: 'Account created successfully!' });
+      toast({ title: 'Account created successfully!', duration: 3000 });
       router.push('/tasks');
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
@@ -51,6 +51,7 @@ function SignupPageContent() {
         title: 'Sign Up Failed',
         description: description,
         variant: 'destructive',
+        duration: 3000,
       });
     } finally {
       setIsLoading(false);
@@ -68,6 +69,7 @@ function SignupPageContent() {
         title: 'Google Sign-In Failed',
         description: error.message,
         variant: 'destructive',
+        duration: 3000,
       });
       setIsLoading(false);
     }

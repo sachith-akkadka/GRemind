@@ -158,12 +158,14 @@ export default function HistoryPage() {
         toast({
           title: 'History Cleared',
           description: 'All completed tasks have been deleted.',
+          duration: 3000,
         });
       } catch (error) {
         toast({
           title: 'Error Clearing History',
           description: 'Could not clear task history.',
           variant: 'destructive',
+          duration: 3000,
         });
       }
     };

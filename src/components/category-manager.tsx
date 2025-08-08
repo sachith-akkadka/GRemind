@@ -31,9 +31,9 @@ export function CategoryManager({ categories, setCategories, userId }: CategoryM
             });
             setCategories([...categories, { id: docRef.id, name: newCategoryName.trim() }]);
             setNewCategoryName('');
-            toast({ title: "Category Added", description: `"${newCategoryName}" has been added.` });
+            toast({ title: "Category Added", description: `"${newCategoryName}" has been added.`, duration: 3000 });
         } catch (error) {
-            toast({ title: "Error", description: "Could not add category.", variant: 'destructive' });
+            toast({ title: "Error", description: "Could not add category.", variant: 'destructive', duration: 3000 });
         }
     };
 
@@ -46,9 +46,9 @@ export function CategoryManager({ categories, setCategories, userId }: CategoryM
             setCategories(categories.map(c => c.id === editingCategoryId ? { ...c, name: editingCategoryName.trim() } : c));
             setEditingCategoryId(null);
             setEditingCategoryName('');
-            toast({ title: "Category Updated" });
+            toast({ title: "Category Updated", duration: 3000 });
         } catch (error) {
-            toast({ title: "Error", description: "Could not update category.", variant: 'destructive' });
+            toast({ title: "Error", description: "Could not update category.", variant: 'destructive', duration: 3000 });
         }
     };
 
@@ -58,9 +58,9 @@ export function CategoryManager({ categories, setCategories, userId }: CategoryM
         try {
             await deleteDoc(doc(db, 'users', userId, 'categories', categoryId));
             setCategories(categories.filter(c => c.id !== categoryId));
-            toast({ title: "Category Deleted" });
+            toast({ title: "Category Deleted", duration: 3000 });
         } catch (error) {
-            toast({ title: "Error", description: "Could not delete category.", variant: 'destructive' });
+            toast({ title: "Error", description: "Could not delete category.", variant: 'destructive', duration: 3000 });
         }
     };
 
