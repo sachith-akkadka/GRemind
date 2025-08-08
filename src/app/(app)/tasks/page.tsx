@@ -130,13 +130,13 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
     let destination = task.store;
 
     if (!userLocation) {
-        toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive" });
+        toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive", duration: 3000 });
         setIsNavigating(false);
         return;
     }
 
     if (!destination) {
-        toast({ title: "Finding location...", description: `Searching for a place to complete "${task.title}"...` });
+        toast({ title: "Finding location...", description: `Searching for a place to complete "${task.title}"...`, duration: 3000 });
         try {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
@@ -144,13 +144,13 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
                 destination = `${locationResult.latlon}`; 
                 onUpdateTask(task.id, { store: destination, storeName: locationResult.name });
             } else {
-                 toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive" });
+                 toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive", duration: 3000 });
                  setIsNavigating(false);
                  return;
             }
         } catch(error) {
             console.error("Error finding location:", error);
-            toast({ title: "Error", description: "Failed to find a location.", variant: "destructive" });
+            toast({ title: "Error", description: "Failed to find a location.", variant: "destructive", duration: 3000 });
             setIsNavigating(false);
             return;
         }
@@ -389,7 +389,8 @@ function NewTaskSheet({
       toast({
         title: "Location Needed",
         description: "Please enable location services to use this feature.",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 3000,
       });
     }
   };
@@ -400,6 +401,7 @@ function NewTaskSheet({
         title: 'Missing Information',
         description: 'Please fill out the title and due date.',
         variant: 'destructive',
+        duration: 3000,
       });
       return;
     }
@@ -434,7 +436,7 @@ function NewTaskSheet({
         category = categoryResult.suggestedCategory;
       } catch (error) {
           console.error("Failed to suggest category:", error);
-          toast({ title: "AI Category Suggestion Failed", variant: "destructive" });
+          toast({ title: "AI Category Suggestion Failed", variant: "destructive", duration: 3000 });
       }
     }
 
@@ -700,7 +702,7 @@ export default function TasksPage() {
             handleUpdateTask(task.id, { status: 'completed', completedAt: Timestamp.now() });
             toast({ title: 'Task Completed', description: `"${task.title}" marked as done.`, duration: 3000});
         } else if (event.action === 'no') {
-            toast({ title: 'Re-routing...', description: `Finding a new location for "${task.title}".`});
+            toast({ title: 'Re-routing...', description: `Finding a new location for "${task.title}".`, duration: 3000});
             
             const remainingTasks = tasks.filter(t => t.id !== task.id && t.status !== 'completed' && t.store);
             const remainingDestinations = remainingTasks.map(t => t.store!);
@@ -716,7 +718,7 @@ export default function TasksPage() {
                  await handleUpdateTask(task.id, { store: result.newLocation.address, storeName: result.newLocation.name });
                  toast({ title: 'New Location Found!', description: `Headed to ${result.newLocation.name}.`, duration: 3000});
             } else {
-                toast({ title: 'No other locations found', variant: 'destructive'});
+                toast({ title: 'No other locations found', variant: 'destructive', duration: 3000});
             }
 
             // Re-route to map
@@ -742,7 +744,7 @@ export default function TasksPage() {
         if (granted) {
             toast({ title: "Notifications enabled!", description: "You'll receive reminders for your tasks.", duration: 3000 });
         } else {
-            toast({ title: "Notifications blocked", description: "You won't receive task reminders. You can enable them in your browser settings.", variant: "destructive" });
+            toast({ title: "Notifications blocked", description: "You won't receive task reminders. You can enable them in your browser settings.", variant: "destructive", duration: 3000 });
         }
     });
 
@@ -757,7 +759,8 @@ export default function TasksPage() {
            toast({
             title: "Could not get location",
             description: "Using a default location. Location suggestions may not be accurate.",
-            variant: "destructive"
+            variant: "destructive",
+            duration: 3000,
            })
            setUserLocation("12.9716,77.5946"); // Default to Bangalore as a fallback
         },
@@ -928,7 +931,7 @@ export default function TasksPage() {
         }
     } catch (error) {
         console.error("Error submitting task:", error);
-        toast({ title: "Submission Error", description: "Could not save the task.", variant: "destructive" });
+        toast({ title: "Submission Error", description: "Could not save the task.", variant: "destructive", duration: 3000 });
     }
   };
   
@@ -938,7 +941,7 @@ export default function TasksPage() {
         await updateDoc(taskRef, updatedTask as any);
      } catch (error) {
         console.error("Error updating task:", error);
-        toast({ title: "Update Error", description: "Could not update the task.", variant: "destructive" });
+        toast({ title: "Update Error", description: "Could not update the task.", variant: "destructive", duration: 3000 });
      }
   };
   
@@ -953,7 +956,7 @@ export default function TasksPage() {
         });
     } catch (error) {
         console.error("Error deleting task:", error);
-        toast({ title: "Delete Error", description: "Could not delete the task.", variant: "destructive" });
+        toast({ title: "Delete Error", description: "Could not delete the task.", variant: "destructive", duration: 3000 });
     }
   };
 
@@ -977,12 +980,12 @@ export default function TasksPage() {
 
   const handleStartMultiStopNavigation = async () => {
     if (!userLocation) {
-        toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive" });
+        toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive", duration: 3000 });
         return;
     }
 
     setIsNavigatingMultiple(true);
-    toast({ title: "Planning your route...", description: "Finding the best locations for your tasks." });
+    toast({ title: "Planning your route...", description: "Finding the best locations for your tasks.", duration: 3000 });
     
     let tasksToNavigate: Task[] = [];
     switch (activeTab) {
@@ -1031,11 +1034,11 @@ export default function TasksPage() {
             locationsToVisit.forEach(wp => params.append('waypoints', wp));
             router.push(`/map?${params.toString()}`);
         } else {
-            toast({ title: "No locations found", description: "Could not find any locations for the current tasks.", variant: "destructive" });
+            toast({ title: "No locations found", description: "Could not find any locations for the current tasks.", variant: "destructive", duration: 3000 });
         }
     } catch (error) {
         console.error("Error during multi-stop navigation planning:", error);
-        toast({ title: "Routing Error", description: "Failed to plan the multi-stop route.", variant: "destructive" });
+        toast({ title: "Routing Error", description: "Failed to plan the multi-stop route.", variant: "destructive", duration: 3000 });
     } finally {
         setIsNavigatingMultiple(false);
     }
@@ -1168,6 +1171,3 @@ export default function TasksPage() {
     </>
   );
 }
-
-
-
