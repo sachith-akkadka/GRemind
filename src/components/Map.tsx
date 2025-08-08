@@ -16,7 +16,7 @@ interface MapProps {
     waypoints?: { location: string }[] | null;
 }
 
-const libraries: ('places' | 'directions')[] = ['places', 'directions'];
+const libraries: ('places')[] = ['places'];
 
 const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
     const [directionsResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null);
