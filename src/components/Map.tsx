@@ -20,12 +20,16 @@ const libraries: ('places' | 'directions')[] = ['places', 'directions'];
 
 const Map = ({ origin, destination, waypoints }: MapProps) => {
     // State to hold the API key, ensuring it's available client-side
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const [apiKey, setApiKey] = useState<string | null>(null);
+
+    useEffect(() => {
+        // This ensures the environment variable is read only on the client side
+        setApiKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || null);
+    }, []);
 
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: apiKey || "",
         libraries,
-        // prevent the script from loading until the API key is set
         preventGoogleFontsLoading: true,
         id: 'google-map-script',
         // Only attempt to load the script if the API key is present
