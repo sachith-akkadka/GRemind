@@ -382,9 +382,10 @@ function NewTaskSheet({
     }
   }, [userLocation, title, locationName, locationSuggestions.length, showLocationSuggestions]);
 
-  const handleMapIconClick = () => {
+  const handleMapIconClick = React.useCallback(async () => {
     if (userLocation) {
-      router.push('/map');
+      const query = title || (locationName || 'place');
+      fetchLocationSuggestions(query);
     } else {
       toast({
         title: "Location Needed",
@@ -393,7 +394,7 @@ function NewTaskSheet({
         duration: 3000,
       });
     }
-  };
+  }, [userLocation, title, locationName, fetchLocationSuggestions, toast]);
 
   const handleSubmit = async () => {
     if (!title || !dueDate) {

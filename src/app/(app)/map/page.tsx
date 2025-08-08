@@ -46,7 +46,8 @@ export default function MapPage() {
                         variant: "destructive",
                         duration: 3000,
                     });
-                }
+                },
+                { enableHighAccuracy: true } // Request high accuracy
             );
         }
     }, [toast, searchParams]);
