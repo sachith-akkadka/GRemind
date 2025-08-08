@@ -4,7 +4,6 @@
 import { useJsApiLoader, GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
-import { firebaseConfig } from '@/lib/firebase';
 
 const mapContainerStyle = {
   width: "100%",
@@ -17,9 +16,12 @@ interface MapProps {
     waypoints?: { location: string }[] | null;
 }
 
+const libraries: ('places' | 'directions')[] = ['places', 'directions'];
+
 const Map = ({ origin, destination, waypoints }: MapProps) => {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        libraries,
     });
 
     const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Default center
