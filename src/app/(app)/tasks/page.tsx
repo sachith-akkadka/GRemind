@@ -685,6 +685,34 @@ function NewTaskSheet({
                 </div>
               </div>
             </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <div className="grid gap-2">
+                     <Label>Priority</Label>
+                      <Select value={priority} onValueChange={(v) => setPriority(v as Task['priority'])}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Set priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <div className="grid gap-2">
+                     <Label>Recurring</Label>
+                      <Select value={recurring} onValueChange={(v) => setRecurring(v as Task['recurring'] | 'none')}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Set recurrence" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+            </div>
              <div 
                 className="grid gap-2 relative"
                 onBlur={(e) => {
@@ -737,34 +765,6 @@ function NewTaskSheet({
                     ))}
                   </div>
                 )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                 <div className="grid gap-2">
-                     <Label>Priority</Label>
-                      <Select value={priority} onValueChange={(v) => setPriority(v as Task['priority'])}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Set priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                        </SelectContent>
-                    </Select>
-                 </div>
-                 <div className="grid gap-2">
-                     <Label>Recurring</Label>
-                      <Select value={recurring} onValueChange={(v) => setRecurring(v as Task['recurring'] | 'none')}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Set recurrence" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                        </SelectContent>
-                    </Select>
-                 </div>
             </div>
           </div>
         </div>
