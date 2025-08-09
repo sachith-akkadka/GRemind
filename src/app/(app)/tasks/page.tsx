@@ -284,7 +284,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
            {task.status === 'missed' && (
             <Button variant="outline" size="sm" onClick={handleReschedule} disabled={isRescheduling}>
               {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-              {isRescheduling ? 'Thinking...' : 'AI Reschedule'}
+              {isRescheduling ? 'Rescheduling...' : 'Reschedule'}
             </Button>
            )}
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
@@ -732,7 +732,7 @@ function NewTaskSheet({
                       setLocationName(e.target.value);
                       if (!showLocationSuggestions) setShowLocationSuggestions(true);
                     }}
-                    onFocus={handleLocationFocus}
+                    onFocus={() => setShowLocationSuggestions(true)}
                     autoComplete="off"
                   />
                   {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
@@ -875,7 +875,7 @@ export default function TasksPage() {
           setUserLocation(`${latitude},${longitude}`);
         },
         (error) => {
-          console.error("Error getting user location:", error);
+          console.error("Error getting user location:", error.message);
            toast({
             title: "Could not get location",
             description: `Error: ${error.message}. Location features may be limited.`,
