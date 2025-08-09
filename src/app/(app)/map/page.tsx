@@ -6,13 +6,13 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { reroute, RerouteInput, RerouteOutput } from '@/ai/flows/reroute-flow';
 
 const Map = dynamic(() => import("@/components/Map"), { 
     ssr: false,
-    loading: () => <div className="h-[60vh] w-full bg-muted rounded-lg flex items-center justify-center"><p>Loading map...</p></div>
+    loading: () => <div className="h-screen w-full bg-muted flex items-center justify-center"><p>Loading map...</p></div>
 });
 
 export default function MapPage() {
@@ -28,10 +28,13 @@ export default function MapPage() {
 
     useEffect(() => {
         // Set state from URL params on initial load
-        setOrigin(searchParams.get('origin'));
-        setDestination(searchParams.get('destination'));
-        setWaypoints(searchParams.getAll('waypoints').map(w => ({ location: w })));
+        const originParam = searchParams.get('origin');
+        const destinationParam = searchParams.get('destination');
+        const waypointsParam = searchParams.getAll('waypoints').map(w => ({ location: w }));
 
+        setDestination(destinationParam);
+        setWaypoints(waypointsParam);
+        
         // Get user's current location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -39,10 +42,8 @@ export default function MapPage() {
                     const { latitude, longitude } = position.coords;
                     const newLocation = `${latitude},${longitude}`;
                     setUserLocation(newLocation);
-                    // Set origin to user's location if it's not already in the URL
-                    if (!searchParams.get('origin')) {
-                        setOrigin(newLocation);
-                    }
+                    // Use user's location as origin if not provided in URL
+                    setOrigin(originParam || newLocation);
                 },
                 (error) => {
                     console.error("Error getting user location:", error);
@@ -52,9 +53,14 @@ export default function MapPage() {
                         variant: "destructive",
                         duration: 3000,
                     });
+                    // Fallback to origin from params if geolocation fails
+                    if(originParam) setOrigin(originParam);
                 },
                 { enableHighAccuracy: true }
             );
+        } else {
+            // Fallback for browsers without geolocation
+            if(originParam) setOrigin(originParam);
         }
     }, [searchParams, toast]);
 
@@ -97,7 +103,7 @@ export default function MapPage() {
                 const newDestination = newOptimizedRoute.pop()!;
                 const newWaypoints = newOptimizedRoute;
 
-                // Update URL to reflect the new, optimized route
+                // Update URL to reflect the new, optimized route without reloading the page
                 const params = new URLSearchParams();
                 params.set('origin', userLocation);
                 params.set('destination', newDestination);
@@ -119,34 +125,34 @@ export default function MapPage() {
     }, [userLocation, destination, waypoints, toast, router]);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-            <CardTitle>Your Task Map</CardTitle>
-            <CardDescription>
-                {destination ? "Showing the optimized route to your destinations." : "Your current location."}
-            </CardDescription>
-        </div>
+    <div className="w-screen h-screen relative">
+      <div className="absolute top-4 left-4 z-10 flex gap-2">
+         <Button
+            onClick={() => router.push('/tasks')}
+            size="icon"
+            variant="outline"
+            className="rounded-full bg-background/80"
+         >
+             <ArrowLeft className="h-5 w-5" />
+             <span className="sr-only">Back to Tasks</span>
+         </Button>
          {destination && (
              <Button
                 onClick={handleRecalculateRoute}
                 disabled={!userLocation || isRecalculating}
                 variant="outline"
+                className="rounded-full bg-background/80"
              >
                 {isRecalculating ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                     <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Recalculate From My Location
+                Recalculate
             </Button>
          )}
-      </CardHeader>
-      <CardContent>
-        <div className="h-[60vh] rounded-lg overflow-hidden border">
-          <Map origin={origin} destination={destination} waypoints={waypoints}/>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <Map origin={origin} destination={destination} waypoints={waypoints}/>
+    </div>
   );
 }

@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function UserNav() {
@@ -48,7 +48,7 @@ export function UserNav() {
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
     const names = name.split(' ');
-    if (names.length > 1) {
+    if (names.length > 1 && names[1]) {
         return (names[0][0] + names[names.length - 1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
@@ -81,9 +81,15 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
+             <Link href="/history">
+                <History className="mr-2 h-4 w-4" />
+                <span>History</span>
+             </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
              <Link href="/settings">
-                <UserIcon className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
              </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>

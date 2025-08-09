@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -17,21 +18,21 @@ const links = [
     href: '/tasks',
     icon: ListTodo,
   },
-    {
-    name: 'Map',
-    href: '/map',
-    icon: Map,
-  },
-  {
-    name: 'History',
-    href: '/history',
-    icon: History,
-  },
-  {
-    name: 'Settings',
-    href: '/settings',
-    icon: Settings,
-  },
+  // {
+  //   name: 'Map',
+  //   href: '/map',
+  //   icon: Map,
+  // },
+  // {
+  //   name: 'History',
+  //   href: '/history',
+  //   icon: History,
+  // },
+  // {
+  //   name: 'Settings',
+  //   href: '/settings',
+  //   icon: Settings,
+  // },
 ];
 
 interface MainNavProps {
@@ -44,7 +45,7 @@ export function MainNav({ isCollapsed }: MainNavProps) {
   return (
     <nav className="flex flex-col gap-2 px-2">
       {links.map((link) => {
-        const isActive = pathname === link.href;
+        const isActive = pathname.startsWith(link.href);
         if (isCollapsed) {
           return (
             <Tooltip key={link.href} delayDuration={0}>

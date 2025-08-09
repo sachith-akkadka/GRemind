@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -43,17 +44,20 @@ const suggestLocationsFlow = ai.defineFlow(
     outputSchema: SuggestLocationsOutputSchema,
   },
   async (input) => {
-    if (!input.query.trim()) {
+    // If the query is too short, don't bother the API.
+    if (!input.query.trim() || input.query.trim().length < 2) {
       return { suggestions: [] };
     }
 
+    // Directly call the robust tool to find places. This is more reliable than asking the LLM to do it.
     const toolResult = await findNearbyPlacesTool({ query: input.query, userLocation: input.userLocation });
 
     if (toolResult.places && toolResult.places.length > 0) {
+      // Return the direct result from the tool.
       return { suggestions: toolResult.places };
     }
     
-    // If no places are found, return empty suggestions.
+    // If the tool returns no places, return an empty array.
     return { suggestions: [] };
   }
 );
