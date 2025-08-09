@@ -30,7 +30,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <TooltipProvider delayDuration={0}>
         <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20">
             <div className="flex flex-col">
-            <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card/20 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card/20 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                 {isMobile ? (
                 <Sheet>
                     <SheetTrigger asChild>
@@ -53,8 +53,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 </Sheet>
                 ) : (
                     <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
-                        <AppLogo className="h-6 w-6 text-primary flex-shrink-0" />
-                        <span className="font-bold text-xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
+                        <AppLogo className="h-8 w-8 text-primary flex-shrink-0" />
+                        <span className="font-bold text-2xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
                            {appName}
                         </span>
                     </Link>

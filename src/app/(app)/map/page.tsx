@@ -37,8 +37,7 @@ export default function MapPage() {
 
         setDestination(destinationParam);
         setWaypoints(waypointsParam);
-        setOrigin(originParam);
-
+        
         // Watch user's current location
         let watchId: number;
         if (navigator.geolocation) {
@@ -51,28 +50,36 @@ export default function MapPage() {
                     // On first load, set the origin and center the map
                     if (!origin) {
                         setOrigin(newLocation);
+                    }
+                    if (!mapCenter) {
                         setMapCenter({ lat: latitude, lng: longitude });
                     }
                 },
                 (error) => {
-                    console.error("Error getting user location:", error);
+                    console.error("Error getting user location:", error.message);
                     toast({
                         title: "Could not get location",
-                        description: "Location features will be limited.",
+                        description: `Error: ${error.message || 'Please enable location services.'}`,
                         variant: "destructive",
-                        duration: 3000,
+                        duration: 5000,
                     });
                 },
                 { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
             );
         }
 
+        // If an origin is passed in the URL, use it instead of GPS.
+        if (originParam) {
+           setOrigin(originParam);
+        }
+
+
         return () => {
             if (watchId) {
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [searchParams, toast, origin]);
+    }, [searchParams, toast, origin, mapCenter]);
 
     const handleRecenter = () => {
         if (userLocation) {
