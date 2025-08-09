@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { ChartConfig } from '@/components/ui/chart';
 import { useToast } from '@/hooks/use-toast';
+import { BrainCircuit } from 'lucide-react';
 
 const barChartConfig = {
 	completed: {
@@ -36,6 +37,7 @@ export default function HistoryPage() {
     const { toast } = useToast();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [insights, setInsights] = useState("No insights generated yet. Complete more tasks to see your trends!");
 
     useEffect(() => {
         if (!user) {
@@ -53,7 +55,6 @@ export default function HistoryPage() {
                  return {
                     id: doc.id,
                     ...data,
-                    // Safely convert Timestamps to ISO strings
                     dueDate: data.dueDate instanceof Timestamp ? data.dueDate.toDate().toISOString() : data.dueDate,
                     completedAt: data.completedAt instanceof Timestamp ? data.completedAt.toDate().toISOString() : data.completedAt,
                  } as Task
@@ -67,6 +68,24 @@ export default function HistoryPage() {
 
         return () => unsubscribe();
     }, [user]);
+
+    // Placeholder for AI insights generation
+    useEffect(() => {
+        if (tasks.length > 5) {
+            // In a real scenario, you would call your AI flow here
+            // const insight = await generateInsightsFlow({tasks});
+            // setInsights(insight.summary);
+            const completedCount = tasks.filter(t => t.status === 'completed').length;
+            const mostCommonCategory = Object.entries(tasks.reduce((acc, task) => {
+                acc[task.category] = (acc[task.category] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>)).sort((a,b) => b[1] - a[1])[0]?.[0];
+
+            if (mostCommonCategory) {
+              setInsights(`You've completed ${completedCount} tasks! Your most frequent category is "${mostCommonCategory}". Keep up the great work.`);
+            }
+        }
+    }, [tasks]);
 
     // Calculate stats
     const today = startOfDay(new Date());
@@ -116,7 +135,6 @@ export default function HistoryPage() {
         let streak = 0;
         let currentDate = endOfDay(new Date());
         
-        // Check if today or yesterday has a completed task
         if(differenceInCalendarDays(currentDate, uniqueDates[0]) > 1) {
             return 0;
         }
@@ -269,6 +287,21 @@ export default function HistoryPage() {
               <span className="text-xl text-muted-foreground">days</span>
             </div>
           </CardContent>
+        </Card>
+
+         <Card className="xl:col-span-1">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <BrainCircuit className="w-6 h-6 text-primary" />
+                    Weekly Insights
+                </CardTitle>
+                <CardDescription>An AI-powered summary of your week.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground italic">
+                   {insights}
+                </p>
+            </CardContent>
         </Card>
       </div>
       <Card>

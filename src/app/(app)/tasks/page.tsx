@@ -31,6 +31,10 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  AlertOctagon,
+  TrendingUp,
+  Repeat,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -75,6 +79,7 @@ import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-loc
 import { suggestTaskCategory } from '@/ai/flows/suggest-task-category';
 import { findTaskLocation } from '@/ai/flows/find-task-location';
 import { findNextLocationAndRoute } from '@/ai/flows/find-next-location-and-route';
+import { suggestRescheduleTime } from '@/ai/flows/suggest-reschedule-time';
 import {
   Select,
   SelectContent,
@@ -112,8 +117,16 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
     completed: 'outline',
     missed: 'destructive',
   } as const;
+
+  const priorityIcon = {
+    low: <TrendingUp className="w-4 h-4 text-green-500" />,
+    medium: <TrendingUp className="w-4 h-4 text-yellow-500" />,
+    high: <AlertOctagon className="w-4 h-4 text-red-500" />,
+  }
+  
   const { toast } = useToast();
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [isRescheduling, setIsRescheduling] = React.useState(false);
   const router = useRouter();
 
 
@@ -141,7 +154,6 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         try {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
             if (locationResult) {
-                // The latlon from the tool is used for routing
                 destination = `${locationResult.latlon}`; 
                 onUpdateTask(task.id, { store: destination, storeName: locationResult.name });
             } else {
@@ -164,6 +176,32 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
 
     setIsNavigating(false);
   };
+
+  const handleReschedule = async () => {
+    setIsRescheduling(true);
+    try {
+      const result = await suggestRescheduleTime({
+        taskTitle: task.title,
+        originalDueDate: task.dueDate,
+        userSchedule: "User is generally free on weekday evenings and weekends."
+      });
+      
+      const newDueDate = new Date(result.suggestedRescheduleTime);
+      onUpdateTask(task.id, { dueDate: Timestamp.fromDate(newDueDate) });
+      
+      toast({
+        title: "Task Rescheduled!",
+        description: `${result.reasoning}. New due date: ${format(newDueDate, 'PPP, p')}`,
+        duration: 5000,
+      });
+
+    } catch (error) {
+        console.error("Error rescheduling task:", error);
+        toast({ title: "Reschedule Failed", description: "The AI could not suggest a new time.", variant: "destructive", duration: 3000 });
+    } finally {
+        setIsRescheduling(false);
+    }
+  };
   
   const displayLocation = task.storeName || task.store;
 
@@ -171,7 +209,10 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
     <Card>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">{task.title}</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            {task.priority && priorityIcon[task.priority]}
+            {task.title}
+          </CardTitle>
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -202,6 +243,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         <div className="flex gap-2 items-center">
             <Badge variant={statusVariant[task.status]} className="w-fit capitalize">{task.status}</Badge>
             <Badge variant="outline" className="w-fit">{task.category}</Badge>
+            {task.recurring && <Badge variant="secondary" className="w-fit"><Repeat className="w-3 h-3 mr-1"/> {task.recurring}</Badge>}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -230,7 +272,13 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         )}
       </CardContent>
       {task.status !== 'completed' && (
-        <CardFooter className="flex justify-end">
+        <CardFooter className="flex justify-end gap-2">
+           {task.status === 'missed' && (
+            <Button variant="outline" size="sm" onClick={handleReschedule} disabled={isRescheduling}>
+              {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+              {isRescheduling ? 'Thinking...' : 'AI Reschedule'}
+            </Button>
+           )}
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
              {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
              {isNavigating ? 'Finding...' : 'Start Navigation'}
@@ -266,6 +314,8 @@ function NewTaskSheet({
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [dueDate, setDueDate] = React.useState<Date | undefined>(new Date());
+  const [priority, setPriority] = React.useState<Task['priority']>('medium');
+  const [recurring, setRecurring] = React.useState<Task['recurring'] | 'none'>('none');
   
   const [hour, setHour] = React.useState('09');
   const [minute, setMinute] = React.useState('00');
@@ -302,6 +352,8 @@ function NewTaskSheet({
         setAmpm(formattedAmPm.toUpperCase());
         setLocation(editingTask.store || '');
         setLocationName(editingTask.storeName || '');
+        setPriority(editingTask.priority || 'medium');
+        setRecurring(editingTask.recurring || 'none');
       } else {
         setTitle('');
         setDescription('');
@@ -312,6 +364,8 @@ function NewTaskSheet({
         setAmpm(format(now, 'aa').toUpperCase());
         setLocation('');
         setLocationName('');
+        setPriority('medium');
+        setRecurring('none');
       }
       setLocationSuggestions([]);
       setTaskSuggestions([]);
@@ -449,6 +503,8 @@ function NewTaskSheet({
         ? newStatus
         : newStatus,
       category: category,
+      priority: priority,
+      recurring: recurring === 'none' ? undefined : recurring,
     });
     
     onFilterChange(category, true);
@@ -652,6 +708,34 @@ function NewTaskSheet({
                     ))}
                   </div>
                 )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <div className="grid gap-2">
+                     <Label>Priority</Label>
+                      <Select value={priority} onValueChange={(v) => setPriority(v as Task['priority'])}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Set priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <div className="grid gap-2">
+                     <Label>Recurring</Label>
+                      <Select value={recurring} onValueChange={(v) => setRecurring(v as Task['recurring'] | 'none')}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Set recurrence" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
             </div>
           </div>
         </div>
@@ -1011,7 +1095,13 @@ export default function TasksPage() {
         const locationsToVisit: string[] = [];
         const unresolvedTasks: Task[] = [];
 
-        for (const task of tasksToNavigate) {
+        // Sort by priority before resolving locations
+        const sortedTasks = tasksToNavigate.sort((a,b) => {
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            return (priorityOrder[a.priority || 'medium']) - (priorityOrder[b.priority || 'medium']);
+        })
+
+        for (const task of sortedTasks) {
             if (task.store) {
                 locationsToVisit.push(task.store);
             } else {

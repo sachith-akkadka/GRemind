@@ -46,3 +46,4 @@ export interface Category {
 
 export interface User {
   name: string;
+}
