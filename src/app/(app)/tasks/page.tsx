@@ -201,7 +201,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
       toast({
         title: "Task Rescheduled!",
         description: `Task moved to a new date. Reasoning: ${result.reasoning}`,
-        duration: 5000,
+        duration: 12000,
       });
 
     } catch (error) {
