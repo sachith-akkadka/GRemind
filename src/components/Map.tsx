@@ -2,7 +2,7 @@
 "use client";
 
 import { GoogleMap, Marker, DirectionsRenderer, useLoadScript } from '@react-google-maps/api';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES } from '@/lib/google-maps';
 
@@ -15,21 +15,21 @@ interface MapProps {
     origin?: string | null;
     destination?: string | null;
     waypoints?: { location: string }[] | null;
+    center?: google.maps.LatLngLiteral | null;
+    userLocation?: google.maps.LatLngLiteral;
 }
 
-const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
+const MapComponent = ({ origin, destination, waypoints, center, userLocation }: MapProps) => {
     const [directionsResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null);
+    const mapRef = useRef<google.maps.Map | null>(null);
 
-    const mapCenter = useMemo(() => {
-        if (origin) {
-            const [lat, lng] = origin.split(',').map(Number);
-            if (!isNaN(lat) && !isNaN(lng)) {
-              return { lat, lng };
-            }
+    const defaultCenter = useMemo(() => ({ lat: 34.0522, lng: -118.2437 }), []);
+
+    useEffect(() => {
+        if (center && mapRef.current) {
+            mapRef.current.panTo(center);
         }
-        // A neutral default if origin isn't set yet. It will be updated once geolocation is fetched.
-        return { lat: 34.0522, lng: -118.2437 }; 
-    }, [origin]);
+    }, [center]);
 
     useEffect(() => {
         if (!origin || !destination || typeof window === 'undefined' || !window.google) {
@@ -59,21 +59,49 @@ const MapComponent = ({ origin, destination, waypoints }: MapProps) => {
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={mapCenter}
-            zoom={12}
+            center={center || defaultCenter}
+            zoom={15}
             options={{
                 disableDefaultUI: true,
                 zoomControl: true,
             }}
+            onLoad={(map) => { mapRef.current = map; }}
         >
-            {directionsResponse ? (
-                <DirectionsRenderer directions={directionsResponse} />
-            ) : (
-                <>
-                    {origin && <Marker position={{ lat: parseFloat(origin.split(',')[0]), lng: parseFloat(origin.split(',')[1]) }} />}
-                    {destination && <Marker position={{ lat: parseFloat(destination.split(',')[0]), lng: parseFloat(destination.split(',')[1]) }} />}
-                </>
+            {directionsResponse && (
+                <DirectionsRenderer 
+                    directions={directionsResponse}
+                    options={{
+                        suppressMarkers: true, // We'll render our own markers
+                        polylineOptions: {
+                            strokeColor: '#4A90E2',
+                            strokeWeight: 6,
+                            strokeOpacity: 0.8,
+                        },
+                    }}
+                />
             )}
+            {userLocation && (
+                <Marker 
+                    position={userLocation} 
+                    title="Your Location"
+                    icon={{
+                        path: window.google.maps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: "#4285F4",
+                        fillOpacity: 1,
+                        strokeColor: "white",
+                        strokeWeight: 2,
+                    }}
+                />
+            )}
+            {/* Markers for waypoints and destination */}
+             {directionsResponse?.routes[0]?.legs.map((leg, index) => (
+                <Marker
+                    key={index}
+                    position={leg.end_location}
+                    label={String.fromCharCode(65 + index)}
+                />
+            ))}
         </GoogleMap>
     );
 };

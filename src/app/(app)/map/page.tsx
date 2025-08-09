@@ -4,11 +4,9 @@
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, LocateFixed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { reroute, RerouteInput, RerouteOutput } from '@/ai/flows/reroute-flow';
 
 const Map = dynamic(() => import("@/components/Map"), { 
     ssr: false,
@@ -23,27 +21,38 @@ export default function MapPage() {
     const [origin, setOrigin] = useState<string | null>(null);
     const [destination, setDestination] = useState<string | null>(null);
     const [waypoints, setWaypoints] = useState<{ location: string }[]>([]);
+    
+    // This state will hold the map component's internal center
+    const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral | null>(null);
+
+    // This state will track the user's real-time location
     const [userLocation, setUserLocation] = useState<string | null>(null);
-    const [isRecalculating, setIsRecalculating] = useState(false);
+
 
     useEffect(() => {
-        // Set state from URL params on initial load
+        // Set route details from URL params
         const originParam = searchParams.get('origin');
         const destinationParam = searchParams.get('destination');
         const waypointsParam = searchParams.getAll('waypoints').map(w => ({ location: w }));
 
         setDestination(destinationParam);
         setWaypoints(waypointsParam);
-        
-        // Get user's current location
+        setOrigin(originParam);
+
+        // Watch user's current location
+        let watchId: number;
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
+            watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     const newLocation = `${latitude},${longitude}`;
                     setUserLocation(newLocation);
-                    // Use user's location as origin if not provided in URL
-                    setOrigin(originParam || newLocation);
+                    
+                    // On first load, set the origin and center the map
+                    if (!origin) {
+                        setOrigin(newLocation);
+                        setMapCenter({ lat: latitude, lng: longitude });
+                    }
                 },
                 (error) => {
                     console.error("Error getting user location:", error);
@@ -53,76 +62,27 @@ export default function MapPage() {
                         variant: "destructive",
                         duration: 3000,
                     });
-                    // Fallback to origin from params if geolocation fails
-                    if(originParam) setOrigin(originParam);
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
             );
-        } else {
-            // Fallback for browsers without geolocation
-            if(originParam) setOrigin(originParam);
-        }
-    }, [searchParams, toast]);
-
-    const handleRecalculateRoute = useCallback(async () => {
-        if (!userLocation) {
-            toast({
-                title: 'Cannot Recalculate',
-                description: 'Your current location is missing.',
-                variant: 'destructive',
-                duration: 3000,
-            });
-            return;
         }
 
-        const currentStops = [
-            ...(waypoints?.map(wp => wp.location) || []),
-            ...(destination ? [destination] : [])
-        ];
-
-        if (currentStops.length === 0) {
-            toast({
-                title: 'No destinations to route to.',
-                variant: 'destructive',
-                duration: 3000,
-            });
-            return;
-        }
-
-        setIsRecalculating(true);
-        toast({ title: 'Re-optimizing your route...', duration: 3000 });
-
-        try {
-            const result = await reroute({
-                userLocation: userLocation,
-                destinations: currentStops,
-            });
-
-            if (result.optimizedRoute && result.optimizedRoute.length > 0) {
-                const newOptimizedRoute = [...result.optimizedRoute];
-                const newDestination = newOptimizedRoute.pop()!;
-                const newWaypoints = newOptimizedRoute;
-
-                // Update URL to reflect the new, optimized route without reloading the page
-                const params = new URLSearchParams();
-                params.set('origin', userLocation);
-                params.set('destination', newDestination);
-                newWaypoints.forEach(wp => params.append('waypoints', wp));
-                router.replace(`/map?${params.toString()}`);
-                
-                toast({ title: 'Route Recalculated!', description: 'Your map has been updated with the most efficient route.', duration: 3000 });
-            } else {
-                 toast({ title: 'Could not recalculate', description: 'No new route could be determined.', variant: 'destructive', duration: 3000 });
+        return () => {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
             }
+        };
+    }, [searchParams, toast, origin]);
 
-        } catch (error) {
-            console.error('Error recalculating route:', error);
-            toast({ title: 'Recalculation Failed', description: 'An error occurred while re-optimizing.', variant: 'destructive', duration: 3000 });
-        } finally {
-            setIsRecalculating(false);
+    const handleRecenter = () => {
+        if (userLocation) {
+            const [lat, lng] = userLocation.split(',').map(Number);
+            setMapCenter({ lat, lng });
+            toast({ title: 'Re-centered map!', duration: 2000 });
+        } else {
+            toast({ title: 'Current location not available', variant: 'destructive', duration: 3000 });
         }
-
-    }, [userLocation, destination, waypoints, toast, router]);
+    };
 
   return (
     <div className="w-screen h-screen relative">
@@ -136,23 +96,25 @@ export default function MapPage() {
              <ArrowLeft className="h-5 w-5" />
              <span className="sr-only">Back to Tasks</span>
          </Button>
-         {destination && (
-             <Button
-                onClick={handleRecalculateRoute}
-                disabled={!userLocation || isRecalculating}
-                variant="outline"
-                className="rounded-full bg-background/80"
-             >
-                {isRecalculating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Recalculate
-            </Button>
-         )}
       </div>
-      <Map origin={origin} destination={destination} waypoints={waypoints}/>
+       <div className="absolute bottom-20 right-4 z-10">
+         <Button
+            onClick={handleRecenter}
+            size="icon"
+            variant="outline"
+            className="rounded-full bg-background/80 w-14 h-14"
+         >
+             <LocateFixed className="h-6 w-6" />
+             <span className="sr-only">Recenter Map</span>
+         </Button>
+      </div>
+      <Map 
+        origin={origin} 
+        destination={destination} 
+        waypoints={waypoints}
+        center={mapCenter}
+        userLocation={userLocation ? { lat: parseFloat(userLocation.split(',')[0]), lng: parseFloat(userLocation.split(',')[1]) } : undefined}
+      />
     </div>
   );
 }

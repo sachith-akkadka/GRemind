@@ -13,11 +13,11 @@ import {
 } from "@/components/ui/tooltip"
 
 const links = [
-  {
-    name: 'Tasks',
-    href: '/tasks',
-    icon: ListTodo,
-  },
+  // {
+  //   name: 'Tasks',
+  //   href: '/tasks',
+  //   icon: ListTodo,
+  // },
   // {
   //   name: 'Map',
   //   href: '/map',

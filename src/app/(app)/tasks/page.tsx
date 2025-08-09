@@ -187,7 +187,18 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
       });
       
       const newDueDate = new Date(result.suggestedRescheduleTime);
-      onUpdateTask(task.id, { dueDate: Timestamp.fromDate(newDueDate) });
+      
+      let newStatus: Task['status'] = 'pending';
+      const today = startOfDay(new Date());
+      if (isToday(newDueDate)) {
+          newStatus = 'today';
+      } else if (isTomorrow(newDueDate)) {
+          newStatus = 'tomorrow';
+      } else if (newDueDate < today) {
+          newStatus = 'missed';
+      }
+      
+      onUpdateTask(task.id, { dueDate: Timestamp.fromDate(newDueDate), status: newStatus });
       
       toast({
         title: "Task Rescheduled!",
@@ -849,16 +860,20 @@ export default function TasksPage() {
           console.error("Error getting user location:", error);
            toast({
             title: "Could not get location",
-            description: "Using a default location. Location suggestions may not be accurate.",
+            description: `Error: ${error.message}. Location features may be limited.`,
             variant: "destructive",
-            duration: 3000,
+            duration: 5000,
            })
-           setUserLocation("12.9716,77.5946"); // Default to Bangalore as a fallback
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-        setUserLocation("12.9716,77.5946");
+        toast({
+            title: "Geolocation not supported",
+            description: "Your browser does not support geolocation.",
+            variant: "destructive",
+            duration: 3000,
+        });
     }
   }, [toast]);
   

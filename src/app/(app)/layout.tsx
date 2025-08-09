@@ -18,7 +18,7 @@ import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
-    const [isCollapsed, setIsCollapsed] = React.useState(false);
+    const [isCollapsed, setIsCollapsed] = React.useState(true); // Keep it collapsed
     const isMobile = useIsMobile();
     const { user, loading } = useAuth();
     const appName = "G-Remind";
@@ -85,17 +85,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     </SheetContent>
                 </Sheet>
                 )}
-                {!isMobile && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="hidden sm:flex"
-                    >
-                        <Menu className="h-5 w-5" />
-                        <span className="sr-only">Toggle Menu</span>
-                    </Button>
-                )}
+                
                 <div className="ml-auto flex items-center gap-2">
                 <ThemeToggle />
                 <UserNav />
