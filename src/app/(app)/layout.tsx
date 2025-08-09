@@ -30,7 +30,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <TooltipProvider delayDuration={0}>
         <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20">
             <div className="flex flex-col">
-            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card/20 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card/20 backdrop-blur-sm px-4 md:px-6">
                 {isMobile ? (
                 <Sheet>
                     <SheetTrigger asChild>
@@ -52,7 +52,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     </SheetContent>
                 </Sheet>
                 ) : (
-                    <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
+                    <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden mr-4">
                         <AppLogo className="h-8 w-8 text-primary flex-shrink-0" />
                         <span className="font-bold text-2xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
                            {appName}
@@ -65,7 +65,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 <UserNav />
                 </div>
             </header>
-            <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+            <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 md:p-6">
                 {children}
             </main>
             </div>
