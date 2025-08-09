@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -38,12 +39,15 @@ const prompt = ai.definePrompt({
   Based on the task title, original due date, and user's typical schedule, suggest an optimal time to reschedule the task.
   Provide the suggested reschedule time in ISO format and explain your reasoning.
 
+  IMPORTANT: The suggested reschedule time MUST be in the future, AFTER the original due date.
+  Current Date for context: ${new Date().toISOString()}
+
   Task Title: {{{taskTitle}}}
   Original Due Date: {{{originalDueDate}}}
   User Schedule: {{{userSchedule}}}
 
   Consider the user's schedule and suggest a time when they are most likely to complete the task.
-  The suggested time should be within the next 24 hours.
+  The suggested time should be within the next 24-48 hours.
   Format the suggested reschedule time in ISO format, such as 2024-01-01T10:00:00Z.
   `,
 });
@@ -56,6 +60,14 @@ const suggestRescheduleTimeFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
+    // Add a fallback to ensure the date is in the future
+    if (output && new Date(output.suggestedRescheduleTime) < new Date()) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+      output.suggestedRescheduleTime = tomorrow.toISOString();
+      output.reasoning = "The initial suggestion was in the past, so I've suggested tomorrow morning as a safe default.";
+    }
     return output!;
   }
 );

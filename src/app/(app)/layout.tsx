@@ -18,7 +18,6 @@ import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
-    const [isCollapsed, setIsCollapsed] = React.useState(true); // Keep it collapsed
     const isMobile = useIsMobile();
     const { user, loading } = useAuth();
     const appName = "G-Remind";
@@ -30,41 +29,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     return (
         <TooltipProvider delayDuration={0}>
         <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-primary/30 via-accent/30 to-background dark:from-primary/20 dark:via-accent/20">
-            {!isMobile && (
-            <aside
-                className={cn(
-                'fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r bg-card/20 backdrop-blur-sm transition-all duration-300 ease-in-out sm:flex',
-                isCollapsed && 'w-14'
-                )}
-            >
-                <div
-                className={cn(
-                    'flex h-16 items-center border-b px-6 overflow-hidden',
-                    isCollapsed && 'justify-center px-2'
-                )}
-                >
-                <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
-                    <AppLogo className="h-6 w-6 text-primary flex-shrink-0" />
-                     <div className={cn("flex items-center overflow-hidden transition-all duration-300", isCollapsed ? 'w-0' : 'w-auto ml-2')}>
-                        <span className="font-bold text-xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
-                           {appName}
-                        </span>
-                    </div>
-                </Link>
-                </div>
-                <div className="flex-1 overflow-auto py-4">
-                <MainNav isCollapsed={isCollapsed} />
-                </div>
-            </aside>
-            )}
-            <div
-            className={cn(
-                'flex flex-col transition-all duration-300 ease-in-out',
-                !isMobile && (isCollapsed ? 'sm:pl-14' : 'sm:pl-60')
-            )}
-            >
+            <div className="flex flex-col">
             <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card/20 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                {isMobile && (
+                {isMobile ? (
                 <Sheet>
                     <SheetTrigger asChild>
                     <Button size="icon" variant="outline" className="sm:hidden">
@@ -84,6 +51,13 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     </div>
                     </SheetContent>
                 </Sheet>
+                ) : (
+                    <Link href="/tasks" className="flex items-center gap-2 font-semibold overflow-hidden">
+                        <AppLogo className="h-6 w-6 text-primary flex-shrink-0" />
+                        <span className="font-bold text-xl animate-text-shimmer bg-gradient-to-r from-primary via-accent to-primary bg-[200%_auto] bg-clip-text text-transparent">
+                           {appName}
+                        </span>
+                    </Link>
                 )}
                 
                 <div className="ml-auto flex items-center gap-2">

@@ -118,12 +118,12 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
     missed: 'destructive',
   } as const;
 
-  const priorityIcon = {
-    low: <TrendingUp className="w-4 h-4 text-green-500" />,
-    medium: <TrendingUp className="w-4 h-4 text-yellow-500" />,
-    high: <AlertOctagon className="w-4 h-4 text-red-500" />,
+  const priorityColor = {
+    low: 'border-l-4 border-green-500',
+    medium: 'border-l-4 border-yellow-500',
+    high: 'border-l-4 border-red-500',
   }
-  
+
   const { toast } = useToast();
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [isRescheduling, setIsRescheduling] = React.useState(false);
@@ -194,15 +194,13 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
           newStatus = 'today';
       } else if (isTomorrow(newDueDate)) {
           newStatus = 'tomorrow';
-      } else if (newDueDate < today) {
-          newStatus = 'missed';
       }
       
       onUpdateTask(task.id, { dueDate: Timestamp.fromDate(newDueDate), status: newStatus });
       
       toast({
         title: "Task Rescheduled!",
-        description: `${result.reasoning}. New due date: ${format(newDueDate, 'PPP, p')}`,
+        description: `Task moved to a new date. Reasoning: ${result.reasoning}`,
         duration: 5000,
       });
 
@@ -217,11 +215,10 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   const displayLocation = task.storeName || task.store;
 
   return (
-    <Card>
+    <Card className={cn(task.priority && priorityColor[task.priority])}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg flex items-center gap-2">
-            {task.priority && priorityIcon[task.priority]}
             {task.title}
           </CardTitle>
            <DropdownMenu>
@@ -347,6 +344,22 @@ function NewTaskSheet({
   const [debouncedTitle] = useDebounce(title, 300);
   const [debouncedLocation] = useDebounce(locationName, 300);
 
+  // Auto-location detection
+  const handleTitleBlur = React.useCallback(async () => {
+    // Only run if it's a new task and location is empty
+    if (editingTask || locationName || !title || !userLocation) return;
+    
+    try {
+        const locationResult = await findTaskLocation({ taskTitle: title, userLocation });
+        if (locationResult) {
+            setLocation(locationResult.latlon);
+            setLocationName(locationResult.name);
+            toast({ title: "Location Auto-Detected!", description: `Set location to ${locationResult.name}.`, duration: 3000 });
+        }
+    } catch (error) {
+        console.error("Failed to auto-detect location:", error);
+    }
+  }, [editingTask, locationName, title, userLocation, toast]);
 
   React.useEffect(() => {
     if (open) {
@@ -502,21 +515,25 @@ function NewTaskSheet({
       }
     }
 
+    const taskData: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string } = {
+        id: editingTask?.id,
+        title,
+        description,
+        dueDate: Timestamp.fromDate(combinedDueDate),
+        store: location,
+        storeName: locationName,
+        status: editingTask ? newStatus : newStatus,
+        category: category,
+        priority: priority,
+        recurring: recurring === 'none' ? undefined : recurring,
+    };
+    
+    // This is the fix for the 'undefined' error.
+    if (taskData.recurring === undefined) {
+      delete taskData.recurring;
+    }
 
-    onTaskSubmit({
-      id: editingTask?.id,
-      title,
-      description,
-      dueDate: Timestamp.fromDate(combinedDueDate),
-      store: location,
-      storeName: locationName,
-      status: editingTask
-        ? newStatus
-        : newStatus,
-      category: category,
-      priority: priority,
-      recurring: recurring === 'none' ? undefined : recurring,
-    });
+    onTaskSubmit(taskData);
     
     onFilterChange(category, true);
 
@@ -555,6 +572,7 @@ function NewTaskSheet({
               onBlur={(e) => {
                 if (!e.currentTarget.contains(e.relatedTarget)) {
                   setShowTaskSuggestions(false);
+                  handleTitleBlur(); // Auto-detect location on blur
                 }
               }}
             >
@@ -980,12 +998,12 @@ export default function TasksPage() {
             }
 
             let newStatus: Task['status'] = 'pending';
-            if (isToday(taskDueDate)) {
+            if (taskDueDate < today) {
+                newStatus = 'missed';
+            } else if (isToday(taskDueDate)) {
                 newStatus = 'today';
             } else if (isTomorrow(taskDueDate)) {
                 newStatus = 'tomorrow';
-            } else if (taskDueDate < today) {
-                newStatus = 'missed';
             }
 
             if(newStatus !== task.status) {
