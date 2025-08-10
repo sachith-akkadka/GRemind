@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -462,32 +463,41 @@ function NewTaskSheet({
           toast({ title: "AI Category Suggestion Failed", variant: "destructive", duration: 3000 });
       }
     }
+    
+    // Logic for auto-location assignment
+    let finalLocation = location;
+    let finalLocationName = locationName;
+
+    if (!finalLocation && title && userLocation) {
+        toast({ title: "Finding a location for your task...", duration: 2000 });
+        try {
+            const locationResult = await findTaskLocation({ taskTitle: title, userLocation });
+            if (locationResult) {
+                finalLocation = locationResult.latlon;
+                finalLocationName = locationResult.name;
+                toast({ title: "Location Found!", description: `Task automatically set to ${finalLocationName}.`, duration: 3000 });
+            } else {
+                 toast({ title: "No specific location found", description: "You can add one manually if needed.", duration: 3000 });
+            }
+        } catch (err) {
+            console.error('Auto-location failed', err);
+            toast({ title: "Could not find location", variant: 'destructive', duration: 3000 });
+        }
+    }
+
 
     const taskData: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string } = {
         id: editingTask?.id,
         title,
         description,
         dueDate: Timestamp.fromDate(combinedDueDate),
-        store: location,
-        storeName: locationName,
-        status: editingTask ? newStatus : newStatus,
+        store: finalLocation,
+        storeName: finalLocationName,
+        status: editingTask ? newStatus : 'pending',
         category: category,
         priority: priority,
         recurring: recurring === 'none' ? undefined : recurring,
     };
-    
-    // Auto-location assignment logic
-    if (!taskData.store && taskData.title && userLocation) {
-        try {
-            const locationResult = await findTaskLocation({ taskTitle: taskData.title, userLocation });
-            if (locationResult) {
-                taskData.store = locationResult.latlon;
-                taskData.storeName = locationResult.name;
-            }
-        } catch (err) {
-            console.error('Auto-location fallback failed', err);
-        }
-    }
     
     if (taskData.recurring === undefined) {
       delete taskData.recurring;
@@ -1225,3 +1235,5 @@ export default function TasksPage() {
     </>
   );
 }
+
+    
