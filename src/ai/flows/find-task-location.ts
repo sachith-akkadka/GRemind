@@ -59,7 +59,7 @@ const findTaskLocationFlow = ai.defineFlow(
       }
     });
 
-    const bestPlace = llmResponse.output();
+    const bestPlace = llmResponse.output;
 
     if (!bestPlace) {
       return null;
@@ -69,7 +69,7 @@ const findTaskLocationFlow = ai.defineFlow(
     if (input.locationsToExclude && input.locationsToExclude.includes(bestPlace.latlon)) {
         // This simple logic only excludes the top result.
         // A more robust implementation might re-run the search or check the next result.
-        // For now, if the best place is excluded, we return null.
+        // For now, if the best place is excluded, we return null. 
         return null; 
     }
     
