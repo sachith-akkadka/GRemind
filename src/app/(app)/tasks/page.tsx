@@ -143,21 +143,26 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   
   const handleStartNavigation = async () => {
     setIsNavigating(true);
-    let destination = task.store;
 
     if (!userLocation) {
-        toast({ title: "Location Error", description: "Could not determine your current location.", variant: "destructive", duration: 3000 });
+        toast({ title: "Location Error", description: "Could not determine your current location. Please wait a moment and try again.", variant: "destructive", duration: 3000 });
         setIsNavigating(false);
         return;
     }
 
+    let destination = task.store;
+    let destinationName = task.storeName;
+
+    // If the task doesn't have a location, find one.
     if (!destination) {
-        toast({ title: "Finding location...", description: `Searching for a place to complete "${task.title}"...`, duration: 3000 });
+        toast({ title: "Finding location...", description: `Searching for a place for "${task.title}"...`, duration: 3000 });
         try {
             const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
-            if (locationResult) {
-                destination = `${locationResult.latlon}`; 
-                onUpdateTask(task.id, { store: destination, storeName: locationResult.name });
+            if (locationResult?.latlon) {
+                destination = locationResult.latlon;
+                destinationName = locationResult.name;
+                // Save this found location to the task for future use
+                onUpdateTask(task.id, { store: destination, storeName: destinationName });
             } else {
                  toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive", duration: 3000 });
                  setIsNavigating(false);
@@ -171,9 +176,11 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         }
     }
     
-    localStorage.setItem('gremind_active_destination', JSON.stringify({ latlng: destination, name: task.storeName || task.title, id: task.id }));
+    // Store active task info for the map page to use
+    localStorage.setItem('gremind_active_destination', JSON.stringify({ latlng: destination, name: destinationName || task.title, id: task.id }));
     localStorage.setItem('gremind_active_task_title', task.title);
 
+    // Navigate to the map page with the correct origin and destination
     const params = new URLSearchParams();
     params.set('origin', userLocation);
     params.set('destination', destination);
