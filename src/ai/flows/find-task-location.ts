@@ -40,7 +40,6 @@ const findTaskLocationFlow = ai.defineFlow(
     name: 'findTaskLocationFlow',
     inputSchema: FindTaskLocationInputSchema,
     outputSchema: z.nullable(FindTaskLocationOutputSchema),
-    tools: [findNearbyPlacesTool],
   },
   async (input) => {
     // Use a generative prompt to reason about the best tool to use.
@@ -52,35 +51,28 @@ const findTaskLocationFlow = ai.defineFlow(
       
       Based on the task title, determine the most appropriate type of place to search for (e.g., for "Buy milk", search for "grocery store"; for "Get a haircut", search for "barber shop" or "salon"). Then, use the findNearbyPlacesTool to find the closest option.
       
-      If you find a suitable place, respond with just the output of the tool. If you cannot determine a place type or the tool returns no results, say you could not find a location.`,
+      If you find a suitable place, output a JSON object with the details of the best place. If you cannot determine a place type or the tool returns no results, output null.`,
       tools: [findNearbyPlacesTool],
-      model: 'googleai/gemini-2.0-flash'
+      model: 'googleai/gemini-2.0-flash',
+      output: {
+        schema: z.nullable(FindTaskLocationOutputSchema)
+      }
     });
 
-    const toolRequest = llmResponse.toolRequest();
-    if (!toolRequest) {
-      // LLM couldn't determine a tool to call.
+    const bestPlace = llmResponse.output();
+
+    if (!bestPlace) {
       return null;
     }
 
-    // Execute the tool call requested by the LLM.
-    const toolResponse = await toolRequest.run();
-    
-    // If the tool returns places, return the first (closest) one.
-    if (toolResponse?.places && toolResponse.places.length > 0) {
-      const bestPlace = toolResponse.places[0];
-
-      // Handle location exclusion
-      if (input.locationsToExclude && input.locationsToExclude.includes(bestPlace.latlon)) {
-        if (toolResponse.places.length > 1) {
-          return toolResponse.places[1]; // Return the second best if the first is excluded
-        }
-        return null; // No other options available
-      }
-      return bestPlace;
+    // Handle location exclusion
+    if (input.locationsToExclude && input.locationsToExclude.includes(bestPlace.latlon)) {
+        // This simple logic only excludes the top result.
+        // A more robust implementation might re-run the search or check the next result.
+        // For now, if the best place is excluded, we return null.
+        return null; 
     }
     
-    // If the tool returns no places, return null.
-    return null;
+    return bestPlace;
   }
 );
