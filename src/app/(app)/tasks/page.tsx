@@ -807,7 +807,7 @@ export default function TasksPage() {
             duration: 5000,
            })
         },
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 30000, maximumAge: 0 }
       );
     } else {
         toast({
