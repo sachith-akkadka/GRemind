@@ -225,7 +225,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   const displayLocation = task.storeName || task.store;
 
   return (
-    <Card className={cn("flex flex-col", task.priority && priorityColor[task.priority])}>
+    <Card className={cn("flex flex-col transition-all duration-200 hover:shadow-lg hover:scale-105", task.priority && priorityColor[task.priority])}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -843,25 +843,28 @@ export default function TasksPage() {
         return;
     }
     
-    const watchOptions = {
-        enableHighAccuracy: false,
-        timeout: 30000,
-        maximumAge: 0,
-    };
-    
+    let watchId: number;
+
     const initialOptions = {
-        enableHighAccuracy: false,
+        enableHighAccuracy: false, // More lenient for first fetch
         timeout: 30000,
         maximumAge: 60000, // Allow using a cached position up to 1 minute old
     }
+
+    const watchOptions = {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 0,
+    };
 
     const handleLocationSuccess = (position: GeolocationPosition) => {
         const { latitude, longitude } = position.coords;
         const newLocation = `${latitude},${longitude}`;
         setUserLocation(newLocation);
-        
-        // After getting the first successful location, start watching for updates.
-        navigator.geolocation.watchPosition(
+
+        // After getting the first successful location, start watching for more accurate updates.
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+        watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 const { latitude: lat, longitude: lon } = pos.coords;
                 setUserLocation(`${lat},${lon}`);
@@ -883,6 +886,12 @@ export default function TasksPage() {
     
     // First, try to get the current position once with lenient settings.
     navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, initialOptions);
+    
+    return () => {
+        if (watchId && navigator.geolocation) {
+            navigator.geolocation.clearWatch(watchId);
+        }
+    }
 
   }, [toast]);
   

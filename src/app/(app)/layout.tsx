@@ -70,7 +70,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                            </div>
                            <div className="flex flex-col gap-2 p-4">
                               {mobileNavLinks.map(link => (
-                                 <Button key={link.href} variant={pathname === link.href ? 'secondary' : 'ghost'} className="justify-start" asChild>
+                                 <Button key={link.href} variant={pathname === link.href ? 'secondary' : 'ghost'} className="justify-start hover:scale-105 transition-transform" asChild>
                                     <Link href={link.href}>
                                        <link.icon className="w-4 h-4 mr-2" />
                                        {link.label}
