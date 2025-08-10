@@ -35,27 +35,6 @@ export async function findTaskLocation(input: FindTaskLocationInput): Promise<Fi
   return findTaskLocationFlow(input);
 }
 
-
-const findTaskLocationPrompt = ai.definePrompt(
-  {
-    name: 'findTaskLocationPrompt',
-    input: { schema: FindTaskLocationInputSchema },
-    output: { schema: z.nullable(FindTaskLocationOutputSchema) },
-    tools: [findNearbyPlacesTool],
-    prompt: `Based on the user's task title and current location, find the single best and most relevant nearby place for them to complete their task.
-    
-    Task: {{{taskTitle}}}
-    User Location: {{{userLocation}}}
-    {{#if locationsToExclude}}
-    Do not suggest any of the following locations: {{{locationsToExclude}}}
-    {{/if}}
-
-    Only call the findNearbyPlacesTool ONE TIME with the best query. If the tool returns no results, then you must return null.
-    `,
-  },
-);
-
-
 const findTaskLocationFlow = ai.defineFlow(
   {
     name: 'findTaskLocationFlow',
@@ -63,16 +42,24 @@ const findTaskLocationFlow = ai.defineFlow(
     outputSchema: z.nullable(FindTaskLocationOutputSchema),
   },
   async (input) => {
-    const llmResponse = await findTaskLocationPrompt(input);
-    const toolRequest = llmResponse.toolRequest();
-
-    if (toolRequest) {
-      const toolOutput = await toolRequest.run();
-      const finalResponse = await llmResponse.continue(toolOutput);
-      return finalResponse.output();
+    // Directly call the robust tool to find places.
+    const toolResult = await findNearbyPlacesTool({ query: input.taskTitle, userLocation: input.userLocation });
+    
+    // If the tool returns places, return the first (closest) one.
+    if (toolResult.places && toolResult.places.length > 0) {
+      const bestPlace = toolResult.places[0];
+      // Exclude locations if they are in the exclusion list
+      if (input.locationsToExclude && input.locationsToExclude.includes(bestPlace.latlon)) {
+        // Return the second best if the first is excluded
+        if (toolResult.places.length > 1) {
+          return toolResult.places[1];
+        }
+        return null;
+      }
+      return bestPlace;
     }
     
-    // If no tool is called, maybe the LLM decided no location was relevant.
-    return llmResponse.output();
+    // If the tool returns no places, return null.
+    return null;
   }
 );
