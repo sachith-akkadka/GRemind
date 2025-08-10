@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?keyword=${encodeURIComponent(
       keyword as string
-    )}&location=${lat},${lng}&radius=${radius}&key=${apiKey}`;
+    )}&location=${lat},${lng}&radius=${radius}&key=${apiKey}&rankby=distance`;
 
     const resp = await fetch(url);
     const data = await resp.json();
