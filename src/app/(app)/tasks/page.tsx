@@ -157,7 +157,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
     if (!destination) {
         toast({ title: "Finding location...", description: `Searching for a place for "${task.title}"...`, duration: 3000 });
         try {
-            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
+            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation, locationsToExclude: [] });
             if (locationResult?.latlon) {
                 destination = locationResult.latlon;
                 destinationName = locationResult.name;
@@ -339,7 +339,7 @@ function NewTaskSheet({
   const [minute, setMinute] = React.useState('00');
   const [ampm, setAmpm] = React.useState('AM');
   
-  const [location, setLocation] = React.useState(''); // this will hold lat,lng
+  const [location, setLocation] = React.useState<{lat: number, lng: number} | null>(null);
   const [locationName, setLocationName] = React.useState(''); // this will hold readable name
   const [isLocationPickerOpen, setIsLocationPickerOpen] = React.useState(false);
 
@@ -363,7 +363,12 @@ function NewTaskSheet({
         setHour(formattedHour);
         setMinute(formattedMinute);
         setAmpm(formattedAmPm.toUpperCase());
-        setLocation(editingTask.store || '');
+        if (editingTask.store) {
+            const [lat, lng] = editingTask.store.split(',').map(Number);
+            setLocation({lat, lng});
+        } else {
+            setLocation(null);
+        }
         setLocationName(editingTask.storeName || '');
         setPriority(editingTask.priority || 'medium');
         setRecurring(editingTask.recurring || 'none');
@@ -375,7 +380,7 @@ function NewTaskSheet({
         setHour(format(now, 'hh'));
         setMinute('00');
         setAmpm(format(now, 'aa').toUpperCase());
-        setLocation('');
+        setLocation(null);
         setLocationName('');
         setPriority('medium');
         setRecurring('none');
@@ -407,17 +412,16 @@ function NewTaskSheet({
   }, [debouncedTitle, fetchTaskSuggestions]);
   
   const handleLocationSelect = (latLng: { lat: number; lng: number }) => {
-    const latLonStr = `${latLng.lat},${latLng.lng}`;
-    setLocation(latLonStr);
+    setLocation(latLng);
     setLocationName(`Custom location (${latLng.lat.toFixed(4)}, ${latLng.lng.toFixed(4)})`);
     setIsLocationPickerOpen(false);
   };
   
-  const handlePlaceSelect = (place: { placeId?: string, description: string, lat?: number, lng?: number, name?: string}) => {
+  const handlePlaceSelect = (place: { lat?: number, lng?: number, name?: string, address?: string }) => {
       if(place.lat && place.lng) {
-          setLocation(`${place.lat},${place.lng}`);
+          setLocation({lat: place.lat, lng: place.lng});
       }
-      setLocationName(place.name || place.description);
+      setLocationName(place.name || place.address || '');
   }
 
 
@@ -474,9 +478,11 @@ function NewTaskSheet({
         const locationResult = await findTaskLocation({
           taskTitle: title,
           userLocation,
+          locationsToExclude: []
         });
         if (locationResult) {
-          finalLocation = locationResult.latlon;
+          const [lat, lng] = locationResult.latlon.split(',').map(Number);
+          finalLocation = { lat, lng };
           finalLocationName = locationResult.name;
           toast({
             title: 'Location Found!',
@@ -507,7 +513,7 @@ function NewTaskSheet({
       title,
       description,
       dueDate: Timestamp.fromDate(combinedDueDate),
-      store: finalLocation,
+      store: finalLocation ? `${finalLocation.lat},${finalLocation.lng}` : undefined,
       storeName: finalLocationName,
       status: editingTask ? newStatus : 'pending',
       category: category,
@@ -517,6 +523,12 @@ function NewTaskSheet({
   
     if (taskData.recurring === undefined) {
       delete taskData.recurring;
+    }
+    if (taskData.store === undefined) {
+      delete taskData.store;
+    }
+    if (taskData.storeName === undefined) {
+      delete taskData.storeName;
     }
   
     onTaskSubmit(taskData);
@@ -612,6 +624,7 @@ function NewTaskSheet({
                       currentLocation={userLocation ? { lat: parseFloat(userLocation.split(',')[0]), lng: parseFloat(userLocation.split(',')[1]) } : null}
                       taskTitle={title}
                       placeholder="e.g., Downtown Mall"
+                      initialValue={locationName}
                   />
                   <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationPickerOpen(true)}>
                       <MapPin className="h-4 w-4" />
@@ -1125,7 +1138,7 @@ export default function TasksPage() {
         }
         
         for (const task of unresolvedTasks) {
-            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
+            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation, locationsToExclude: [] });
             if (locationResult) {
                 const fullAddress = locationResult.latlon; // This is now lat,lon
                 locationsToVisit.push(fullAddress);
