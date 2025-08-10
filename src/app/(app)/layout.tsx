@@ -21,10 +21,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const appName = "G-Remind";
 
-    const navLinks = [
-      { href: '/tasks', icon: ListTodo, label: 'Tasks' },
-    ];
-
     const mobileNavLinks = [
         { href: '/tasks', icon: ListTodo, label: 'Tasks' },
         { href: '/history', icon: History, label: 'History' },
@@ -48,14 +44,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 
                 {/* Desktop Nav */}
                 <nav className="hidden md:flex items-center gap-4">
-                  {navLinks.map(link => (
-                     <Button key={link.href} variant={pathname === link.href ? 'secondary' : 'ghost'} asChild>
-                        <Link href={link.href}>
-                           <link.icon className="w-4 h-4 mr-2" />
-                           {link.label}
-                        </Link>
-                     </Button>
-                  ))}
+                  
                 </nav>
 
                 <div className="ml-auto flex items-center gap-2">
