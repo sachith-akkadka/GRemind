@@ -44,14 +44,20 @@ const findTaskLocationFlow = ai.defineFlow(
   async (input) => {
     // Use a generative prompt to reason about the best tool to use.
     const llmResponse = await ai.generate({
-      prompt: `You are a helpful assistant for a task management app. Your goal is to find the best real-world location for a user's task.
+      prompt: `You are a helpful assistant for a task management app. Your goal is to find the single best real-world location for a user's task.
 
       Task Title: "${input.taskTitle}"
       User's Current Location: ${input.userLocation}
       
-      Based on the task title, determine the most appropriate type of place to search for (e.g., for "Buy milk", search for "grocery store"; for "Get a haircut", search for "barber shop" or "salon"). Then, use the findNearbyPlacesTool to find the closest option.
-      
-      If you find a suitable place, output a JSON object with the details of the best place. If you cannot determine a place type or the tool returns no results, output null.`,
+      1.  **Analyze the Task:** Based on the task title, determine the most appropriate and specific type of place to search for. For example:
+          *   If the task is "Buy medicine", the best search keyword is "pharmacy" or "drugstore".
+          *   If the task is "Get a haircut", the best search keyword is "barber shop" or "salon".
+          *   If the task is "Deposit check", the best search keyword is "bank" or "atm".
+          *   If the task is "Buy groceries", a good keyword is "grocery store".
+
+      2.  **Find the Nearest Place:** Use the 'findNearbyPlacesTool' with the specific keyword you determined. This tool will automatically find the closest options to the user.
+
+      3.  **Return the Top Result:** If the tool finds one or more suitable places, output a JSON object with the details of only the very first (and therefore closest) place from the list. If you cannot determine a place type or the tool returns no results, output null.`,
       tools: [findNearbyPlacesTool],
       model: 'googleai/gemini-2.0-flash',
       output: {
