@@ -23,8 +23,12 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
     const navLinks = [
       { href: '/tasks', icon: ListTodo, label: 'Tasks' },
-      { href: '/history', icon: History, label: 'History' },
-      { href: '/settings', icon: Settings, label: 'Settings' },
+    ];
+
+    const mobileNavLinks = [
+        { href: '/tasks', icon: ListTodo, label: 'Tasks' },
+        { href: '/history', icon: History, label: 'History' },
+        { href: '/settings', icon: Settings, label: 'Settings' },
     ];
 
     if (loading) {
@@ -73,7 +77,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                               </Link>
                            </div>
                            <div className="flex flex-col gap-2 p-4">
-                              {navLinks.map(link => (
+                              {mobileNavLinks.map(link => (
                                  <Button key={link.href} variant={pathname === link.href ? 'secondary' : 'ghost'} className="justify-start" asChild>
                                     <Link href={link.href}>
                                        <link.icon className="w-4 h-4 mr-2" />
