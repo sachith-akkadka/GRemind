@@ -176,6 +176,8 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         }
     }
     
+    localStorage.setItem("gremind_active_task_title", task.title);
+
     // Navigate to the map page with the correct origin and destination
     const params = new URLSearchParams();
     params.set('origin', userLocation);

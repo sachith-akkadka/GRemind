@@ -35,6 +35,27 @@ export async function findTaskLocation(input: FindTaskLocationInput): Promise<Fi
   return findTaskLocationFlow(input);
 }
 
+
+const findTaskLocationPrompt = ai.definePrompt(
+  {
+    name: 'findTaskLocationPrompt',
+    input: { schema: FindTaskLocationInputSchema },
+    output: { schema: z.nullable(FindTaskLocationOutputSchema) },
+    tools: [findNearbyPlacesTool],
+    prompt: `Based on the user's task title and current location, find the single best and most relevant nearby place for them to complete their task.
+    
+    Task: {{{taskTitle}}}
+    User Location: {{{userLocation}}}
+    {{#if locationsToExclude}}
+    Do not suggest any of the following locations: {{{locationsToExclude}}}
+    {{/if}}
+
+    Only call the findNearbyPlacesTool ONE TIME with the best query. If the tool returns no results, then you must return null.
+    `,
+  },
+);
+
+
 const findTaskLocationFlow = ai.defineFlow(
   {
     name: 'findTaskLocationFlow',
@@ -42,21 +63,16 @@ const findTaskLocationFlow = ai.defineFlow(
     outputSchema: z.nullable(FindTaskLocationOutputSchema),
   },
   async (input) => {
-    // This is a more direct and reliable approach. Instead of asking an LLM
-    // to call the tool for us, we call the tool directly with the task title as the query.
-    // This mirrors the logic in `suggest-locations` which is known to work.
-    const toolResult = await findNearbyPlacesTool({ query: input.taskTitle, userLocation: input.userLocation });
+    const llmResponse = await findTaskLocationPrompt(input);
+    const toolRequest = llmResponse.toolRequest();
 
-    const filteredPlaces = toolResult.places?.filter(place => 
-      !input.locationsToExclude?.includes(place.latlon)
-    );
-
-    // If the tool returns any places, we return the first one, which is the most relevant/closest.
-    if (filteredPlaces && filteredPlaces.length > 0) {
-      return filteredPlaces[0];
+    if (toolRequest) {
+      const toolOutput = await toolRequest.run();
+      const finalResponse = await llmResponse.continue(toolOutput);
+      return finalResponse.output();
     }
     
-    // If no places are found, return null.
-    return null;
+    // If no tool is called, maybe the LLM decided no location was relevant.
+    return llmResponse.output();
   }
 );
