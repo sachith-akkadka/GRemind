@@ -885,6 +885,7 @@ export default function TasksPage() {
       let shouldUpdate = false;
       
       const reminderMinutes = parseInt(userPreferences.defaultReminder, 10);
+      const vibrationPattern = [200, 100, 200]; // Vibrate, pause, vibrate
 
       querySnapshot.forEach((taskDoc) => {
         const data = taskDoc.data() as FirestoreTask;
@@ -909,6 +910,7 @@ export default function TasksPage() {
                         body: `Due in ${reminderMinutes} minutes at ${format(taskDueDate, 'p')}.`, 
                         tag: task.id + '_time',
                         data: { taskId: task.id, type: 'time' },
+                        vibrate: vibrationPattern,
                     },
                 );
                 notifiedTasksRef.current.add(task.id + '_time');
@@ -927,7 +929,8 @@ export default function TasksPage() {
                         { 
                             body: `You can do this at ${task.storeName || 'the destination'} just 100m away!`, 
                             tag: task.id, // Use task.id as tag for departure logic
-                            data: { taskId: task.id, type: 'arrival' }
+                            data: { taskId: task.id, type: 'arrival' },
+                            vibrate: vibrationPattern,
                         }
                      );
                      notifiedTasksRef.current.add(task.id + '_arrival');
@@ -942,7 +945,8 @@ export default function TasksPage() {
                             body: `Did you complete "${task.title}" at ${task.storeName || 'the last location'}?`,
                             tag: task.id, // Use task.id to link to click handler
                             requireInteraction: true,
-                            actions: [{ action: 'yes', title: 'Yes' }, { action: 'no', title: 'Not Yet' }]
+                            actions: [{ action: 'yes', title: 'Yes' }, { action: 'no', title: 'Not Yet' }],
+                            vibrate: vibrationPattern,
                         }
                     );
                     notifiedTasksRef.current.add(task.id + '_departure');
@@ -1254,5 +1258,7 @@ export default function TasksPage() {
     </>
   );
 }
+
+    
 
     
