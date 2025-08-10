@@ -471,20 +471,35 @@ function NewTaskSheet({
     let finalLocationName = locationName;
 
     if (!finalLocation && title && userLocation) {
-        toast({ title: "Finding a location for your task...", duration: 2000 });
-        try {
-            const locationResult = await findTaskLocation({ taskTitle: title, userLocation });
-            if (locationResult) {
-                finalLocation = locationResult.latlon;
-                finalLocationName = locationResult.name;
-                toast({ title: "Location Found!", description: `Task automatically set to ${finalLocationName}.`, duration: 3000 });
-            } else {
-                 toast({ title: "No specific location found", description: "You can add one manually if needed.", duration: 3000 });
-            }
-        } catch (err) {
-            console.error('Auto-location failed', err);
-            toast({ title: "Could not find location", variant: 'destructive', duration: 3000 });
+      toast({ title: "Finding a location for your task...", duration: 2000 });
+      try {
+        const locationResult = await findTaskLocation({
+          taskTitle: title,
+          userLocation,
+        });
+        if (locationResult) {
+          finalLocation = locationResult.latlon;
+          finalLocationName = locationResult.name;
+          toast({
+            title: "Location Found!",
+            description: `Task automatically set to ${finalLocationName}.`,
+            duration: 3000,
+          });
+        } else {
+          toast({
+            title: "No specific location found",
+            description: "You can add one manually if needed.",
+            duration: 3000,
+          });
         }
+      } catch (err) {
+        console.error('Auto-location failed', err);
+        toast({
+          title: "Could not find location",
+          variant: 'destructive',
+          duration: 3000,
+        });
+      }
     }
 
 
@@ -507,7 +522,9 @@ function NewTaskSheet({
 
     onTaskSubmit(taskData);
     
-    onFilterChange(category, true);
+    if (category) {
+        onFilterChange(category, true);
+    }
 
     onOpenChange(false);
   };
