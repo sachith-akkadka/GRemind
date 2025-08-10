@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -91,6 +92,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { requestNotificationPermission, showNotification } from '@/lib/notifications';
 import { LocationPicker } from '@/components/LocationPicker';
 import PlaceAutocomplete from '@/components/PlaceAutocomplete';
+import styles from '@/styles/futuristic.module.css';
+
 
 // Haversine formula to calculate distance between two lat/lon points
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -291,7 +294,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
            )}
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
              {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
-             {isNavigating ? 'Finding...' : 'Start Navigation'}
+             {isNavigating ? 'Finding...' : 'Start'}
           </Button>
         </CardFooter>
       )}
@@ -571,6 +574,21 @@ function NewTaskSheet({
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
+             <div className="grid gap-2 relative">
+                <Label htmlFor="location">Location (Optional)</Label>
+                 <div className="flex items-center gap-2">
+                   <PlaceAutocomplete 
+                      onSelect={handlePlaceSelect}
+                      currentLocation={userLocation ? { lat: parseFloat(userLocation.split(',')[0]), lng: parseFloat(userLocation.split(',')[1]) } : null}
+                      taskTitle={title}
+                      placeholder="e.g., Downtown Mall"
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationPickerOpen(true)}>
+                      <MapPin className="h-4 w-4" />
+                      <span className="sr-only">Find on map</span>
+                  </Button>
+                </div>
+             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="dueDate">Due Date</Label>
@@ -667,28 +685,13 @@ function NewTaskSheet({
                     </Select>
                  </div>
             </div>
-             <div className="grid gap-2 relative">
-                <Label htmlFor="location">Location (Optional)</Label>
-                 <div className="flex items-center gap-2">
-                   <PlaceAutocomplete 
-                      onSelect={handlePlaceSelect}
-                      currentLocation={userLocation ? { lat: parseFloat(userLocation.split(',')[0]), lng: parseFloat(userLocation.split(',')[1]) } : null}
-                      taskTitle={title}
-                      placeholder="e.g., Downtown Mall"
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationPickerOpen(true)}>
-                      <MapPin className="h-4 w-4" />
-                      <span className="sr-only">Find on map</span>
-                  </Button>
-                </div>
-             </div>
           </div>
         </div>
         <SheetFooter className="mt-auto">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSubmit}>
+          <Button type="submit" onClick={handleSubmit} className={styles.futuristicButton}>
             {editingTask ? 'Save Changes' : 'Create Task'}
           </Button>
         </SheetFooter>

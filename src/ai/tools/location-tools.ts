@@ -58,7 +58,9 @@ export const findNearbyPlacesTool = ai.defineTool(
     // 1. Find Nearby Places using Places API
     const placesUrl = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
     placesUrl.searchParams.set('location', input.userLocation);
-    placesUrl.searchParams.set('rankby', 'distance');
+    // When using rankby=distance, the radius parameter is not allowed.
+    // The API will return the most relevant results in ascending order of distance.
+    placesUrl.searchParams.set('rankby', 'distance'); 
     placesUrl.searchParams.set('keyword', input.query);
     placesUrl.searchParams.set('key', apiKey);
 
