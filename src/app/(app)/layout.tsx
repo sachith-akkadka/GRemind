@@ -13,7 +13,6 @@ import { Menu } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ThemeProvider } from 'next-themes';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -23,7 +22,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     const appName = "G-Remind";
 
     if (loading) {
-        return <div>Loading...</div>; // Or a proper skeleton loader
+        return <div className="flex h-screen w-full items-center justify-center"><div>Loading...</div></div>;
     }
     
     return (
@@ -78,15 +77,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-        <AuthProvider>
-            <AppLayoutContent>{children}</AppLayoutContent>
-        </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+        <AppLayoutContent>{children}</AppLayoutContent>
+    </AuthProvider>
   );
 }
