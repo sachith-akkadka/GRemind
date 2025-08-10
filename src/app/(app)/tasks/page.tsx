@@ -846,10 +846,10 @@ export default function TasksPage() {
     let watchId: number;
 
     const initialOptions = {
-        enableHighAccuracy: false, // More lenient for first fetch
+        enableHighAccuracy: false,
         timeout: 30000,
-        maximumAge: 60000, // Allow using a cached position up to 1 minute old
-    }
+        maximumAge: 60000,
+    };
 
     const watchOptions = {
         enableHighAccuracy: true,
@@ -862,7 +862,6 @@ export default function TasksPage() {
         const newLocation = `${latitude},${longitude}`;
         setUserLocation(newLocation);
 
-        // After getting the first successful location, start watching for more accurate updates.
         if (watchId) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition(
             (pos) => {
@@ -884,7 +883,6 @@ export default function TasksPage() {
         });
     };
     
-    // First, try to get the current position once with lenient settings.
     navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, initialOptions);
     
     return () => {
