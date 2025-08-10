@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -75,7 +74,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
-import { suggestLocations, SuggestLocationsOutput } from '@/ai/flows/suggest-locations';
 import { suggestTaskCategory } from '@/ai/flows/suggest-task-category';
 import { findTaskLocation } from '@/ai/flows/find-task-location';
 import { findNextLocationAndRoute } from '@/ai/flows/find-next-location-and-route';
@@ -92,6 +90,7 @@ import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { requestNotificationPermission, showNotification } from '@/lib/notifications';
 import { LocationPicker } from '@/components/LocationPicker';
+import PlaceAutocomplete from '@/components/PlaceAutocomplete';
 
 // Haversine formula to calculate distance between two lat/lon points
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -169,6 +168,9 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         }
     }
     
+    localStorage.setItem('gremind_active_destination', JSON.stringify({ latlng: destination, name: task.storeName || task.title, id: task.id }));
+    localStorage.setItem('gremind_active_task_title', task.title);
+
     const params = new URLSearchParams();
     params.set('origin', userLocation);
     params.set('destination', destination);
@@ -329,11 +331,8 @@ function NewTaskSheet({
   const [minute, setMinute] = React.useState('00');
   const [ampm, setAmpm] = React.useState('AM');
   
-  const [location, setLocation] = React.useState('');
-  const [locationName, setLocationName] = React.useState('');
-  const [locationSuggestions, setLocationSuggestions] = React.useState<SuggestLocationsOutput['suggestions']>([]);
-  const [isSuggestingLocations, setIsSuggestingLocations] = React.useState(false);
-  const [showLocationSuggestions, setShowLocationSuggestions] = React.useState(true);
+  const [location, setLocation] = React.useState(''); // this will hold lat,lng
+  const [locationName, setLocationName] = React.useState(''); // this will hold readable name
   const [isLocationPickerOpen, setIsLocationPickerOpen] = React.useState(false);
 
 
@@ -342,24 +341,6 @@ function NewTaskSheet({
   const [showTaskSuggestions, setShowTaskSuggestions] = React.useState(true);
 
   const [debouncedTitle] = useDebounce(title, 300);
-  const [debouncedLocation] = useDebounce(locationName, 300);
-
-  // Auto-location detection
-  const handleTitleBlur = React.useCallback(async () => {
-    // Only run if it's a new task and location is empty
-    if (editingTask || locationName || !title || !userLocation) return;
-    
-    try {
-        const locationResult = await findTaskLocation({ taskTitle: title, userLocation });
-        if (locationResult) {
-            setLocation(locationResult.latlon);
-            setLocationName(locationResult.name);
-            toast({ title: "Location Auto-Detected!", description: `Set location to ${locationResult.name}.`, duration: 3000 });
-        }
-    } catch (error) {
-        console.error("Failed to auto-detect location:", error);
-    }
-  }, [editingTask, locationName, title, userLocation, toast]);
 
   React.useEffect(() => {
     if (open) {
@@ -391,10 +372,8 @@ function NewTaskSheet({
         setPriority('medium');
         setRecurring('none');
       }
-      setLocationSuggestions([]);
       setTaskSuggestions([]);
       setShowTaskSuggestions(true);
-      setShowLocationSuggestions(true);
     }
   }, [open, editingTask]);
 
@@ -419,55 +398,19 @@ function NewTaskSheet({
     fetchTaskSuggestions(debouncedTitle);
   }, [debouncedTitle, fetchTaskSuggestions]);
   
-  const fetchLocationSuggestions = React.useCallback(async (query: string) => {
-    if (query.length < 2 || !showLocationSuggestions || !userLocation) {
-      setLocationSuggestions([]);
-      return;
-    }
-    setIsSuggestingLocations(true);
-    try {
-      const result = await suggestLocations({ query, userLocation });
-      setLocationSuggestions(result.suggestions);
-    } catch (error) {
-      console.error("Failed to fetch location suggestions:", error);
-      setLocationSuggestions([]);
-    } finally {
-      setIsSuggestingLocations(false);
-    }
-  }, [showLocationSuggestions, userLocation]);
-
-  React.useEffect(() => {
-    if (debouncedLocation) {
-      fetchLocationSuggestions(debouncedLocation);
-    }
-  }, [debouncedLocation, fetchLocationSuggestions]);
-
-  const handleLocationFocus = React.useCallback(async () => {
-    if (userLocation) {
-        if (!locationName && (locationSuggestions.length === 0 || !showLocationSuggestions)) {
-            setIsSuggestingLocations(true);
-            try {
-                // Use task title as query if available, otherwise fetch general nearby places
-                const result = await suggestLocations({ query: title || 'place', userLocation });
-                setLocationSuggestions(result.suggestions);
-                setShowLocationSuggestions(true);
-            } catch (error) {
-                console.error("Failed to fetch contextual location suggestions:", error);
-            } finally {
-                setIsSuggestingLocations(false);
-            }
-        } else if (locationName) {
-            setShowLocationSuggestions(true);
-        }
-    }
-  }, [userLocation, title, locationName, locationSuggestions.length, showLocationSuggestions]);
-
   const handleLocationSelect = (latLng: { lat: number; lng: number }) => {
     const latLonStr = `${latLng.lat},${latLng.lng}`;
     setLocation(latLonStr);
     setLocationName(`Custom location (${latLng.lat.toFixed(4)}, ${latLng.lng.toFixed(4)})`);
     setIsLocationPickerOpen(false);
   };
+  
+  const handlePlaceSelect = (place: { placeId?: string, description: string, lat?: number, lng?: number, name?: string}) => {
+      if(place.lat && place.lng) {
+          setLocation(`${place.lat},${place.lng}`);
+      }
+      setLocationName(place.name || place.description);
+  }
 
 
   const handleSubmit = async () => {
@@ -528,6 +471,37 @@ function NewTaskSheet({
         recurring: recurring === 'none' ? undefined : recurring,
     };
     
+    // Auto-location assignment logic from the master prompt
+    let resolvedStore = taskData.store || null;
+    let resolvedStoreName = taskData.storeName || '';
+
+    if (!resolvedStore && taskData.title) {
+      let currentCoords: { lat: number; lng: number } | null = null;
+      if(userLocation) {
+        const [lat, lng] = userLocation.split(',').map(Number);
+        currentCoords = { lat, lng };
+      }
+      
+      if (currentCoords) {
+        try {
+          const resp = await fetch(
+            `/api/reoptimize?keyword=${encodeURIComponent(taskData.title)}&lat=${currentCoords.lat}&lng=${currentCoords.lng}`
+          );
+          if(resp.ok) {
+            const places = await resp.json();
+            if (places && places.length > 0) {
+              resolvedStore = `${places[0].lat},${places[0].lng}`;
+              resolvedStoreName = places[0].name;
+              taskData.store = resolvedStore;
+              taskData.storeName = resolvedStoreName;
+            }
+          }
+        } catch (err) {
+          console.error('Auto-location fallback failed', err);
+        }
+      }
+    }
+    
     // This is the fix for the 'undefined' error.
     if (taskData.recurring === undefined) {
       delete taskData.recurring;
@@ -572,7 +546,6 @@ function NewTaskSheet({
               onBlur={(e) => {
                 if (!e.currentTarget.contains(e.relatedTarget)) {
                   setShowTaskSuggestions(false);
-                  handleTitleBlur(); // Auto-detect location on blur
                 }
               }}
             >
@@ -713,59 +686,21 @@ function NewTaskSheet({
                     </Select>
                  </div>
             </div>
-             <div 
-                className="grid gap-2 relative"
-                onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget)) {
-                    setShowLocationSuggestions(false);
-                  }
-                }}
-              >
-              <Label htmlFor="location">Location (Optional)</Label>
-              <div className="flex items-center gap-2">
-                <div className="relative w-full">
-                  <Input
-                    id="location"
-                    placeholder="e.g., Downtown Mall or select on map"
-                    value={locationName}
-                    onChange={(e) => {
-                      setLocationName(e.target.value);
-                      if (!showLocationSuggestions) setShowLocationSuggestions(true);
-                    }}
-                    onFocus={() => setShowLocationSuggestions(true)}
-                    autoComplete="off"
+             <div className="grid gap-2 relative">
+                <Label htmlFor="location">Location (Optional)</Label>
+                 <div className="flex items-center gap-2">
+                   <PlaceAutocomplete 
+                      onSelect={handlePlaceSelect}
+                      currentLocation={userLocation ? { lat: parseFloat(userLocation.split(',')[0]), lng: parseFloat(userLocation.split(',')[1]) } : null}
+                      taskTitle={title}
+                      placeholder="e.g., Downtown Mall"
                   />
-                  {isSuggestingLocations && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                </div>
-                 <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationPickerOpen(true)}>
-                    <MapPin className="h-4 w-4" />
-                    <span className="sr-only">Find on map</span>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationPickerOpen(true)}>
+                      <MapPin className="h-4 w-4" />
+                      <span className="sr-only">Find on map</span>
                   </Button>
-              </div>
-                {locationSuggestions.length > 0 && showLocationSuggestions && (
-                  <div className="absolute z-10 w-full bg-card border rounded-md shadow-lg mt-1 top-full max-h-48 overflow-y-auto">
-                    {locationSuggestions.map((suggestion, index) => (
-                      <div
-                        key={index}
-                        className="p-3 hover:bg-muted cursor-pointer border-b"
-                        onMouseDown={() => { // use onMouseDown to fire before onBlur
-                          setLocation(suggestion.latlon); // The lat,lon string
-                          setLocationName(suggestion.name); // The readable name
-                          setShowLocationSuggestions(false);
-                        }}
-                      >
-                        <p className="font-semibold">{suggestion.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {suggestion.address}
-                        </p>
-                        <p className="text-xs text-primary font-medium">
-                          {suggestion.eta} away
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-            </div>
+                </div>
+             </div>
           </div>
         </div>
         <SheetFooter className="mt-auto">
@@ -852,10 +787,14 @@ export default function TasksPage() {
         }
     };
     
-    navigator.serviceWorker.addEventListener('notificationclick', handleNotificationClick);
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('notificationclick', handleNotificationClick);
+    }
 
     return () => {
-        navigator.serviceWorker.removeEventListener('notificationclick', handleNotificationClick);
+        if(navigator.serviceWorker) {
+            navigator.serviceWorker.removeEventListener('notificationclick', handleNotificationClick);
+        }
     };
   }, [tasks, userLocation, router, toast]); // Rerun when tasks or location change
 
