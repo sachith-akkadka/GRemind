@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -77,7 +76,7 @@ import { useToast } from '@/hooks/use-toast';
 import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
 import { suggestTaskCategory } from '@/ai/flows/suggest-task-category';
 import { findTaskLocation } from '@/ai/flows/find-task-location';
-import { findNextLocationAndRoute } from '@/ai/flows/find-next-location-and-route';
+import { suggestLocations } from '@/ai/flows/suggest-locations';
 import { suggestRescheduleTime } from '@/ai/flows/suggest-reschedule-time';
 import {
   Select,
@@ -176,10 +175,6 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         }
     }
     
-    // Store active task info for the map page to use
-    localStorage.setItem('gremind_active_destination', JSON.stringify({ latlng: destination, name: destinationName || task.title, id: task.id }));
-    localStorage.setItem('gremind_active_task_title', task.title);
-
     // Navigate to the map page with the correct origin and destination
     const params = new URLSearchParams();
     params.set('origin', userLocation);
@@ -295,7 +290,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
         <CardFooter className="flex justify-end gap-2">
            {task.status === 'missed' && (
             <Button variant="outline" size="sm" onClick={handleReschedule} disabled={isRescheduling}>
-              {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+              <Zap className="mr-2 h-4 w-4" />
               Reschedule
             </Button>
            )}
@@ -753,28 +748,25 @@ export default function TasksPage() {
             const remainingTasks = tasks.filter(t => t.id !== task.id && t.status !== 'completed' && t.store);
             const remainingDestinations = remainingTasks.map(t => t.store!);
 
-            const result = await findNextLocationAndRoute({
+            const result = await findTaskLocation({
                 taskTitle: task.title,
                 userLocation: userLocation,
-                locationToExclude: task.store,
-                remainingDestinations: remainingDestinations
+                locationsToExclude: [task.store]
             });
 
-            if (result.newLocation) {
-                 await handleUpdateTask(task.id, { store: result.newLocation.address, storeName: result.newLocation.name });
-                 toast({ title: 'New Location Found!', description: `Headed to ${result.newLocation.name}.`, duration: 3000});
+            if (result) {
+                 await handleUpdateTask(task.id, { store: result.latlon, storeName: result.name });
+                 toast({ title: 'New Location Found!', description: `Headed to ${result.name}.`, duration: 3000});
+                 
+                // Re-route to map
+                const params = new URLSearchParams();
+                params.set('origin', userLocation);
+                params.set('destination', result.latlon);
+                remainingDestinations.forEach(wp => params.append('waypoints', wp));
+                router.push(`/map?${params.toString()}`);
             } else {
                 toast({ title: 'No other locations found', variant: 'destructive', duration: 3000});
             }
-
-            // Re-route to map
-            const params = new URLSearchParams();
-            params.set('origin', userLocation);
-            if(result.newDestination) {
-                params.set('destination', result.newDestination);
-            }
-            result.newWaypoints.forEach(wp => params.append('waypoints', wp));
-            router.push(`/map?${params.toString()}`);
         }
     };
     

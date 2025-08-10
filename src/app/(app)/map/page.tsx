@@ -3,13 +3,11 @@
 
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from 'next/navigation';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, LocateFixed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { findNextLocationAndRoute } from "@/ai/flows/find-next-location-and-route";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import ProximityManager from "@/components/ProximityManager";
 
 // Dynamically import MapNavigation to ensure it's client-side only
@@ -18,8 +16,7 @@ const MapNavigation = dynamic(() => import("@/components/MapNavigation"), {
     loading: () => <div className="h-screen w-full bg-muted flex items-center justify-center"><p>Loading map...</p></div>
 });
 
-
-export default function MapPage() {
+function MapPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { toast } = useToast();
@@ -35,17 +32,16 @@ export default function MapPage() {
     // This state will hold the map's center to allow for manual re-centering
     const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral | null>(null);
 
-
     useEffect(() => {
         // Set route details from URL params on initial load
         const originParam = searchParams.get('origin');
         const destParam = searchParams.get('destination');
         const waypointsParam = searchParams.getAll('waypoints').map(w => ({ location: w }));
 
+        setOrigin(originParam);
         setDestination(destParam);
         setWaypoints(waypointsParam);
         
-        // Use a dedicated effect for watching the user's location
         let watchId: number;
         if (navigator.geolocation) {
             watchId = navigator.geolocation.watchPosition(
@@ -54,8 +50,8 @@ export default function MapPage() {
                     const newLocation = `${latitude},${longitude}`;
                     setUserLocation(newLocation);
                     
-                    // On first valid location, set the origin if not already set by params
-                    if (!origin) {
+                    // If origin is not set by param, use real-time location
+                    if (!originParam) {
                         setOrigin(newLocation);
                     }
                 },
@@ -72,21 +68,13 @@ export default function MapPage() {
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
-        
-        // If an origin is passed in the URL, prioritize it over GPS.
-        if (originParam) {
-           setOrigin(originParam);
-        }
-
 
         return () => {
             if (watchId) {
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-        // Run this effect only once on mount
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [searchParams, toast]);
 
     const handleRecenter = () => {
         if (userLocation) {
@@ -102,8 +90,6 @@ export default function MapPage() {
         if (!userLocation || !destination) return;
 
         toast({ title: "Deviated from route", description: "Re-optimizing your path...", duration: 3000 });
-        
-        const allDestinations = [destination, ...waypoints.map(w => w.location)];
         
         const activeTaskTitle = localStorage.getItem("gremind_active_task_title") || "current task";
 
@@ -168,4 +154,12 @@ export default function MapPage() {
        <ProximityManager />
     </div>
   );
+}
+
+export default function MapPage() {
+    return (
+        <Suspense fallback={<div className="h-screen w-full bg-muted flex items-center justify-center"><p>Loading...</p></div>}>
+            <MapPageContent />
+        </Suspense>
+    )
 }
