@@ -467,12 +467,11 @@ function NewTaskSheet({
   
     let finalLocation = location;
     let finalLocationName = locationName;
-    let locationResult: FindTaskLocationOutput | null = null;
   
     if (!finalLocation && title && userLocation) {
       toast({ title: 'Finding a location for your task...', duration: 2000 });
       try {
-        locationResult = await findTaskLocation({
+        const locationResult = await findTaskLocation({
           taskTitle: title,
           userLocation,
         });
@@ -821,31 +820,51 @@ export default function TasksPage() {
         }
     });
 
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation(`${latitude},${longitude}`);
-        },
-        (error) => {
-          console.error("Error getting user location:", error.message);
-           toast({
-            title: "Could not get location",
-            description: `Error: ${error.message}. Location features may be limited.`,
-            variant: "destructive",
-            duration: 5000,
-           })
-        },
-        { enableHighAccuracy: false, timeout: 30000, maximumAge: 60000 }
-      );
-    } else {
-        toast({
+    if (!navigator.geolocation) {
+       toast({
             title: "Geolocation not supported",
             description: "Your browser does not support geolocation.",
             variant: "destructive",
             duration: 3000,
         });
+        return;
     }
+    
+    const locationOptions = {
+        enableHighAccuracy: false,
+        timeout: 30000,
+        maximumAge: 60000,
+    };
+
+    const handleLocationSuccess = (position: GeolocationPosition) => {
+        const { latitude, longitude } = position.coords;
+        const newLocation = `${latitude},${longitude}`;
+        setUserLocation(newLocation);
+        
+        // After getting the first successful location, start watching for updates.
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                const { latitude: lat, longitude: lon } = pos.coords;
+                setUserLocation(`${lat},${lon}`);
+            },
+            handleLocationError,
+            locationOptions
+        );
+    };
+
+    const handleLocationError = (error: GeolocationPositionError) => {
+        console.error("Error getting user location:", error.message);
+        toast({
+            title: "Could not get location",
+            description: `Error: ${error.message}. Location features may be limited.`,
+            variant: "destructive",
+            duration: 5000,
+        });
+    };
+    
+    // First, try to get the current position once.
+    navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, locationOptions);
+
   }, [toast]);
   
   React.useEffect(() => {
