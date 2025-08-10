@@ -833,7 +833,7 @@ export default function TasksPage() {
     const locationOptions = {
         enableHighAccuracy: false,
         timeout: 30000,
-        maximumAge: 60000,
+        maximumAge: 0,
     };
 
     const handleLocationSuccess = (position: GeolocationPosition) => {
@@ -1277,3 +1277,5 @@ export default function TasksPage() {
     </>
   );
 }
+
+    
