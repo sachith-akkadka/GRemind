@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, LocateFixed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import MapNavigation from "@/components/MapNavigation";
 
 const Map = dynamic(() => import("@/components/Map"), { 
     ssr: false,
@@ -91,6 +92,12 @@ export default function MapPage() {
         }
     };
 
+    const handleReroute = (currentLocation: { lat: number, lng: number }) => {
+        // This is where you would call your reoptimization logic
+        console.log("Reroute requested at", currentLocation);
+        toast({ title: "Deviated from route", description: "Re-routing...", duration: 2000 });
+    }
+
   return (
     <div className="w-screen h-screen relative">
       <div className="absolute top-4 left-4 z-10 flex gap-2">
@@ -115,13 +122,14 @@ export default function MapPage() {
              <span className="sr-only">Recenter Map</span>
          </Button>
       </div>
-      <Map 
-        origin={origin} 
-        destination={destination} 
-        waypoints={waypoints}
-        center={mapCenter}
-        userLocation={userLocation ? { lat: parseFloat(userLocation.split(',')[0]), lng: parseFloat(userLocation.split(',')[1]) } : undefined}
-      />
+       {origin && destination && (
+        <MapNavigation
+          origin={origin}
+          destination={destination}
+          waypoints={waypoints}
+          onRerouteRequested={handleReroute}
+        />
+      )}
     </div>
   );
 }

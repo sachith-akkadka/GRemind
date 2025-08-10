@@ -217,7 +217,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   const displayLocation = task.storeName || task.store;
 
   return (
-    <Card className={cn(task.priority && priorityColor[task.priority])}>
+    <Card className={cn("flex flex-col", task.priority && priorityColor[task.priority])}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -250,13 +250,13 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
             <Badge variant={statusVariant[task.status]} className="w-fit capitalize">{task.status}</Badge>
             <Badge variant="outline" className="w-fit">{task.category}</Badge>
             {task.recurring && <Badge variant="secondary" className="w-fit"><Repeat className="w-3 h-3 mr-1"/> {task.recurring}</Badge>}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1">
         <div className="text-sm text-muted-foreground space-y-1">
            <p className="flex items-center gap-2"><Clock className="w-4 h-4"/> Due: {format(parseISO(task.dueDate), "PPP, p")}</p>
            {displayLocation && <p className="flex items-center gap-2"><MapPin className="w-4 h-4"/> {displayLocation}</p>}
@@ -286,7 +286,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
            {task.status === 'missed' && (
             <Button variant="outline" size="sm" onClick={handleReschedule} disabled={isRescheduling}>
               {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-              {isRescheduling ? 'Rescheduling...' : 'Reschedule'}
+              Reschedule
             </Button>
            )}
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
@@ -471,38 +471,19 @@ function NewTaskSheet({
         recurring: recurring === 'none' ? undefined : recurring,
     };
     
-    // Auto-location assignment logic from the master prompt
-    let resolvedStore = taskData.store || null;
-    let resolvedStoreName = taskData.storeName || '';
-
-    if (!resolvedStore && taskData.title) {
-      let currentCoords: { lat: number; lng: number } | null = null;
-      if(userLocation) {
-        const [lat, lng] = userLocation.split(',').map(Number);
-        currentCoords = { lat, lng };
-      }
-      
-      if (currentCoords) {
+    // Auto-location assignment logic
+    if (!taskData.store && taskData.title && userLocation) {
         try {
-          const resp = await fetch(
-            `/api/reoptimize?keyword=${encodeURIComponent(taskData.title)}&lat=${currentCoords.lat}&lng=${currentCoords.lng}`
-          );
-          if(resp.ok) {
-            const places = await resp.json();
-            if (places && places.length > 0) {
-              resolvedStore = `${places[0].lat},${places[0].lng}`;
-              resolvedStoreName = places[0].name;
-              taskData.store = resolvedStore;
-              taskData.storeName = resolvedStoreName;
+            const locationResult = await findTaskLocation({ taskTitle: taskData.title, userLocation });
+            if (locationResult) {
+                taskData.store = locationResult.latlon;
+                taskData.storeName = locationResult.name;
             }
-          }
         } catch (err) {
-          console.error('Auto-location fallback failed', err);
+            console.error('Auto-location fallback failed', err);
         }
-      }
     }
     
-    // This is the fix for the 'undefined' error.
     if (taskData.recurring === undefined) {
       delete taskData.recurring;
     }
@@ -788,12 +769,14 @@ export default function TasksPage() {
     };
     
     if (navigator.serviceWorker) {
-        navigator.serviceWorker.addEventListener('notificationclick', handleNotificationClick);
+        const sw = navigator.serviceWorker.controller;
+        sw?.addEventListener('notificationclick', handleNotificationClick);
     }
 
     return () => {
-        if(navigator.serviceWorker) {
-            navigator.serviceWorker.removeEventListener('notificationclick', handleNotificationClick);
+       if (navigator.serviceWorker) {
+            const sw = navigator.serviceWorker.controller;
+            sw?.removeEventListener('notificationclick', handleNotificationClick);
         }
     };
   }, [tasks, userLocation, router, toast]); // Rerun when tasks or location change
