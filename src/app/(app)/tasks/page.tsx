@@ -830,11 +830,17 @@ export default function TasksPage() {
         return;
     }
     
-    const locationOptions = {
+    const watchOptions = {
         enableHighAccuracy: false,
         timeout: 30000,
         maximumAge: 0,
     };
+    
+    const initialOptions = {
+        enableHighAccuracy: false,
+        timeout: 30000,
+        maximumAge: 60000, // Allow using a cached position up to 1 minute old
+    }
 
     const handleLocationSuccess = (position: GeolocationPosition) => {
         const { latitude, longitude } = position.coords;
@@ -848,7 +854,7 @@ export default function TasksPage() {
                 setUserLocation(`${lat},${lon}`);
             },
             handleLocationError,
-            locationOptions
+            watchOptions
         );
     };
 
@@ -862,8 +868,8 @@ export default function TasksPage() {
         });
     };
     
-    // First, try to get the current position once.
-    navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, locationOptions);
+    // First, try to get the current position once with lenient settings.
+    navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, initialOptions);
 
   }, [toast]);
   
@@ -1277,5 +1283,3 @@ export default function TasksPage() {
     </>
   );
 }
-
-    
