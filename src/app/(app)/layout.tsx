@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { AppLogo } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { History, ListTodo, Menu, Settings } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -59,6 +59,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                         </Button>
                         </SheetTrigger>
                         <SheetContent side="left" className="sm:max-w-xs bg-card/20 backdrop-blur-sm">
+                           <SheetHeader className="sr-only">
+                             <SheetTitle>Navigation Menu</SheetTitle>
+                           </SheetHeader>
                            <div className="flex h-16 items-center border-b px-6">
                               <Link href="/tasks" className="flex items-center gap-2 font-semibold">
                               <AppLogo className="h-6 w-6 text-primary" />
