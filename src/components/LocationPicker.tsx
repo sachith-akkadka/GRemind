@@ -2,11 +2,10 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from './ui/skeleton';
-import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES } from '@/lib/google-maps';
 
 const mapContainerStyle = {
   width: '100%',
@@ -26,12 +25,16 @@ export const LocationPicker = ({
   onLocationSelect,
   currentLocation,
 }: LocationPickerProps) => {
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
-
+  const [isLoaded, setIsLoaded] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  React.useEffect(() => {
+    // The google maps script is loaded in the root layout, 
+    // so we can just check if window.google is available.
+    if (typeof window !== 'undefined' && (window as any).google) {
+      setIsLoaded(true);
+    }
+  }, []);
 
   const center = useMemo(() => {
     const [lat, lng] = currentLocation.split(',').map(Number);
@@ -66,7 +69,6 @@ export const LocationPicker = ({
           <DialogTitle>Select a Location</DialogTitle>
         </DialogHeader>
         <div className="relative">
-          {loadError && <div>Error loading map</div>}
           {!isLoaded && <Skeleton className="h-[70vh] w-full" />}
           {isLoaded && (
             <GoogleMap
