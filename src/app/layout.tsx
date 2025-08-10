@@ -24,6 +24,19 @@ export default function RootLayout({
             src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places,directions`}
             strategy="beforeInteractive"
           />
+          <Script id="sw-registrar" strategy="afterInteractive">
+            {`
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                  }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                  });
+                });
+              }
+            `}
+          </Script>
       </head>
       <body>
         <ThemeProvider
