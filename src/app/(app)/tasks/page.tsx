@@ -76,7 +76,7 @@ import { format, parseISO, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { suggestTasks, SuggestTasksOutput } from '@/ai/flows/suggest-tasks';
 import { suggestTaskCategory } from '@/ai/flows/suggest-task-category';
-import { findTaskLocation } from '@/ai/flows/find-task-location';
+import { findTaskLocation, FindTaskLocationOutput } from '@/ai/flows/find-task-location';
 import { suggestLocations } from '@/ai/flows/suggest-locations';
 import { suggestRescheduleTime } from '@/ai/flows/suggest-reschedule-time';
 import {
@@ -431,7 +431,7 @@ function NewTaskSheet({
       });
       return;
     }
-
+  
     let hours = parseInt(hour, 10);
     if (ampm === 'PM' && hours < 12) {
       hours += 12;
@@ -439,41 +439,40 @@ function NewTaskSheet({
     if (ampm === 'AM' && hours === 12) {
       hours = 0;
     }
-
+  
     const combinedDueDate = new Date(dueDate);
     combinedDueDate.setHours(hours, parseInt(minute, 10), 0, 0);
-
+  
     let newStatus: Task['status'] = 'pending';
     if (isToday(combinedDueDate)) {
-        newStatus = 'today';
+      newStatus = 'today';
     } else if (isTomorrow(combinedDueDate)) {
-        newStatus = 'tomorrow';
+      newStatus = 'tomorrow';
     }
-
+  
     let category = 'Uncategorized';
     if (editingTask?.category && title === editingTask.title) {
-        category = editingTask.category;
+      category = editingTask.category;
     } else {
       try {
         const categoryResult = await suggestTaskCategory({
-            taskTitle: title,
-            pastCategories: categories.map(c => c.name)
+          taskTitle: title,
+          pastCategories: categories.map((c) => c.name),
         });
         category = categoryResult.suggestedCategory;
       } catch (error) {
-          console.error("Failed to suggest category:", error);
-          toast({ title: "AI Category Suggestion Failed", variant: "destructive", duration: 3000 });
+        console.error('Failed to suggest category:', error);
       }
     }
-    
-    // Logic for auto-location assignment
+  
     let finalLocation = location;
     let finalLocationName = locationName;
-
+    let locationResult: FindTaskLocationOutput | null = null;
+  
     if (!finalLocation && title && userLocation) {
-      toast({ title: "Finding a location for your task...", duration: 2000 });
+      toast({ title: 'Finding a location for your task...', duration: 2000 });
       try {
-        const locationResult = await findTaskLocation({
+        locationResult = await findTaskLocation({
           taskTitle: title,
           userLocation,
         });
@@ -481,51 +480,52 @@ function NewTaskSheet({
           finalLocation = locationResult.latlon;
           finalLocationName = locationResult.name;
           toast({
-            title: "Location Found!",
+            title: 'Location Found!',
             description: `Task automatically set to ${finalLocationName}.`,
             duration: 3000,
           });
         } else {
           toast({
-            title: "No specific location found",
-            description: "You can add one manually if needed.",
+            title: 'No specific location found',
+            description: 'You can add one manually if needed.',
             duration: 3000,
           });
         }
       } catch (err) {
         console.error('Auto-location failed', err);
         toast({
-          title: "Could not find location",
+          title: 'Could not find location',
           variant: 'destructive',
           duration: 3000,
         });
       }
     }
-
-
-    const taskData: Omit<FirestoreTask, 'userId' | 'completedAt'> & { id?: string } = {
-        id: editingTask?.id,
-        title,
-        description,
-        dueDate: Timestamp.fromDate(combinedDueDate),
-        store: finalLocation,
-        storeName: finalLocationName,
-        status: editingTask ? newStatus : 'pending',
-        category: category,
-        priority: priority,
-        recurring: recurring === 'none' ? undefined : recurring,
+  
+    const taskData: Omit<FirestoreTask, 'userId' | 'completedAt'> & {
+      id?: string;
+    } = {
+      id: editingTask?.id,
+      title,
+      description,
+      dueDate: Timestamp.fromDate(combinedDueDate),
+      store: finalLocation,
+      storeName: finalLocationName,
+      status: editingTask ? newStatus : 'pending',
+      category: category,
+      priority: priority,
+      recurring: recurring === 'none' ? undefined : recurring,
     };
-    
+  
     if (taskData.recurring === undefined) {
       delete taskData.recurring;
     }
-
+  
     onTaskSubmit(taskData);
-    
+  
     if (category) {
-        onFilterChange(category, true);
+      onFilterChange(category, true);
     }
-
+  
     onOpenChange(false);
   };
 
@@ -836,7 +836,7 @@ export default function TasksPage() {
             duration: 5000,
            })
         },
-        { enableHighAccuracy: false, timeout: 30000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 30000, maximumAge: 60000 }
       );
     } else {
         toast({
@@ -1258,7 +1258,3 @@ export default function TasksPage() {
     </>
   );
 }
-
-    
-
-    
