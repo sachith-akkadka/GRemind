@@ -31,8 +31,8 @@ const PlaceAutocomplete: React.FC<Props> = ({ taskTitle = '', currentLocation = 
 
     const req = {
       location: new (window as any).google.maps.LatLng(currentLocation),
-      radius: 50000, // wider radius
       keyword: taskTitle,
+      rankBy: (window as any).google.maps.places.RankBy.DISTANCE,
     };
     placesServiceRef.current.nearbySearch(req, (res: any, status: any) => {
       if (status === (window as any).google.maps.places.PlacesServiceStatus.OK) {
