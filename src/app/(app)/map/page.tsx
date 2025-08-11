@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, LocateFixed } from 'lucide-react';
+import { ArrowLeft, LocateFixed, Navigation } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { findNextLocationAndRoute } from "@/ai/flows/find-next-location-and-route";
 import ProximityManager from "@/components/ProximityManager";
@@ -86,12 +86,44 @@ function MapPageContent() {
         }
     };
 
+    const handleStartInGoogleMaps = () => {
+        if (!origin || !destination) {
+            toast({
+                title: 'Route not ready',
+                description: 'Cannot open in Google Maps without a valid route.',
+                variant: 'destructive',
+                duration: 3000,
+            });
+            return;
+        }
+
+        const googleMapsUrl = new URL('https://www.google.com/maps/dir/');
+        googleMapsUrl.searchParams.set('api', '1');
+        googleMapsUrl.searchParams.set('origin', origin);
+        googleMapsUrl.searchParams.set('destination', destination);
+
+        if (waypoints && waypoints.length > 0) {
+            const waypointsString = waypoints.map(w => w.location).join('|');
+            googleMapsUrl.searchParams.set('waypoints', waypointsString);
+        }
+        
+        googleMapsUrl.searchParams.set('travelmode', 'driving');
+
+        window.open(googleMapsUrl.toString(), '_blank');
+    };
+
     const handleReroute = useCallback(async () => {
         if (!userLocation || !destination) return;
 
         toast({ title: "Deviated from route", description: "Re-optimizing your path...", duration: 3000 });
         
-        const activeTaskTitle = localStorage.getItem("gremind_active_task_title") || "current task";
+        const activeTaskTitle = localStorage.getItem("gremind_active_task_title");
+        
+        if (!activeTaskTitle) {
+          toast({ title: "Cannot re-route", description: "Active task information is missing.", variant: "destructive" });
+          return;
+        }
+
 
         try {
             const result = await findNextLocationAndRoute({
@@ -128,6 +160,16 @@ function MapPageContent() {
              <ArrowLeft className="h-5 w-5" />
              <span className="sr-only">Back to Tasks</span>
          </Button>
+      </div>
+      <div className="absolute top-4 right-4 z-10">
+        <Button
+            onClick={handleStartInGoogleMaps}
+            variant="outline"
+            className="rounded-full bg-background/80"
+         >
+            <Navigation className="h-5 w-5 mr-2"/>
+            Start
+        </Button>
       </div>
        <div className="absolute bottom-20 right-4 z-10">
          <Button
