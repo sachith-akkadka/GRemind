@@ -143,45 +143,24 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   
   const handleStartNavigation = async () => {
     setIsNavigating(true);
-
+    
     if (!userLocation) {
-        toast({ title: "Location Error", description: "Could not determine your current location. Please wait a moment and try again.", variant: "destructive", duration: 3000 });
+        toast({ title: "Location Error", description: "Could not determine your current location. Please enable location services.", variant: "destructive", duration: 3000 });
         setIsNavigating(false);
         return;
     }
 
-    let destination = task.store;
-    let destinationName = task.storeName;
-
-    // If the task doesn't have a location, find one.
-    if (!destination) {
-        toast({ title: "Finding location...", description: `Searching for a place for "${task.title}"...`, duration: 3000 });
-        try {
-            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
-            if (locationResult?.latlon) {
-                destination = locationResult.latlon;
-                destinationName = locationResult.name;
-                // Save this found location to the task for future use
-                onUpdateTask(task.id, { store: destination, storeName: destinationName });
-            } else {
-                 toast({ title: "Location Not Found", description: "Could not find a suitable nearby location for this task.", variant: "destructive", duration: 3000 });
-                 setIsNavigating(false);
-                 return;
-            }
-        } catch(error) {
-            console.error("Error finding location:", error);
-            toast({ title: "Error", description: "Failed to find a location.", variant: "destructive", duration: 3000 });
-            setIsNavigating(false);
-            return;
-        }
+    if (!task.store) {
+        toast({ title: "No Location Set", description: "This task doesn't have a location. Please edit the task to add one.", variant: "destructive", duration: 3000 });
+        setIsNavigating(false);
+        return;
     }
     
     localStorage.setItem("gremind_active_task_title", task.title);
 
-    // Navigate to the map page with the correct origin and destination
     const params = new URLSearchParams();
     params.set('origin', userLocation);
-    params.set('destination', destination);
+    params.set('destination', task.store);
     router.push(`/map?${params.toString()}`);
 
     setIsNavigating(false);
@@ -299,7 +278,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
            )}
           <Button variant="outline" size="sm" onClick={handleStartNavigation} disabled={isNavigating}>
              {isNavigating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4" />}
-             {isNavigating ? 'Finding...' : 'Start'}
+             {isNavigating ? 'Starting...' : 'Start'}
           </Button>
         </CardFooter>
       )}
