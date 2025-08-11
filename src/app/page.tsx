@@ -126,21 +126,17 @@ function HomePageContent() {
         
         <section className="py-20 md:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                 <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center bg-card/20 backdrop-blur-sm p-8 rounded-2xl border border-white/10">
-                    <div className="space-y-6">
-                        <Image src="https://placehold.co/600x400.png" alt="App Screenshot of task list" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface tasks" />
-                         <Image src="https://placehold.co/600x400.png" alt="App Screenshot of map view" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app interface map" />
-                    </div>
+                 <div className="bg-card/20 backdrop-blur-sm p-8 rounded-2xl border border-white/10 text-center">
                     <div>
                         <h3 className="text-3xl font-bold inline-block">
                           <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                             Designed for life on the go
                           </span>
                         </h3>
-                        <p className="mt-4 text-muted-foreground">
+                        <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
                            G-Remind's clean, intuitive interface helps you manage your location-based tasks without the clutter. Enjoy a calm, focused experience that adapts to your needs.
                         </p>
-                        <ul className="mt-6 space-y-4">
+                        <ul className="mt-6 space-y-4 max-w-md mx-auto text-left">
                             <li className="flex items-start gap-3">
                                <MapPin className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
                                 <span><span className="font-semibold">Geofencing Alerts:</span> Get smart notifications when you enter or leave a designated area for a task.</span>
