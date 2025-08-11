@@ -228,7 +228,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
     <Card className={cn("flex flex-col transition-all duration-200 hover:shadow-lg hover:scale-105", task.priority && priorityColor[task.priority])}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="text-xl flex items-center gap-2">
             {task.title}
           </CardTitle>
            <DropdownMenu>
