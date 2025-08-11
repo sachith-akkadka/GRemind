@@ -1,19 +1,19 @@
 .futuristicButton {
-  background: linear-gradient(90deg, rgba(99,102,241,1) 0%, rgba(168,85,247,1) 100%);
+  background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
   color: white;
   padding: 10px 16px;
   border-radius: 14px;
   border: none;
   font-weight: 600;
   letter-spacing: 0.2px;
-  box-shadow: 0 6px 20px rgba(99,102,241,0.18), inset 0 -1px 0 rgba(255,255,255,0.05);
+  box-shadow: 0 6px 20px hsla(var(--primary), 0.18), inset 0 -1px 0 rgba(255,255,255,0.05);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .futuristicButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(99,102,241,0.22), inset 0 -1px 0 rgba(255,255,255,0.07);
+  box-shadow: 0 10px 26px hsla(var(--primary), 0.22), inset 0 -1px 0 rgba(255,255,255,0.07);
 }
 .futuristicButton:active {
   transform: translateY(0);
-  box-shadow: 0 6px 16px rgba(99,102,241,0.16);
+  box-shadow: 0 6px 16px hsla(var(--primary), 0.16);
 }

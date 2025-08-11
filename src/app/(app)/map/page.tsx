@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, LocateFixed, Navigation } from 'lucide-react';
+import { ArrowLeft, LocateFixed, RefreshCw, Navigation } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { findNextLocationAndRoute } from "@/ai/flows/find-next-location-and-route";
 import ProximityManager from "@/components/ProximityManager";
@@ -161,7 +161,7 @@ function MapPageContent() {
              <span className="sr-only">Back to Tasks</span>
          </Button>
       </div>
-      <div className="absolute top-4 right-4 z-10">
+       <div className="absolute top-4 right-4 z-10">
         <Button
             onClick={handleStartInGoogleMaps}
             variant="outline"
@@ -171,7 +171,15 @@ function MapPageContent() {
             Start
         </Button>
       </div>
-       <div className="absolute bottom-20 right-4 z-10">
+       <div className="absolute bottom-20 right-4 z-10 flex flex-col gap-2">
+         <Button
+            onClick={handleReroute}
+            variant="outline"
+            className="rounded-full bg-background/80 w-auto h-14"
+         >
+             <RefreshCw className="h-6 w-6" />
+             <span className="ml-2">Re-optimize</span>
+         </Button>
          <Button
             onClick={handleRecenter}
             size="icon"
@@ -189,6 +197,7 @@ function MapPageContent() {
           waypoints={waypoints}
           onRerouteRequested={handleReroute}
           voiceEnabled={true}
+          center={mapCenter}
         />
       ) : (
          <div className="h-screen w-full bg-muted flex items-center justify-center"><p>Waiting for location data to start navigation...</p></div>

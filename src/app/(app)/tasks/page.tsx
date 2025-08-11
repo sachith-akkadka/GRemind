@@ -143,7 +143,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   
   const handleStartNavigation = async () => {
     setIsNavigating(true);
-    
+
     if (!userLocation) {
         toast({ title: "Location Error", description: "Could not determine your current location. Please enable location services.", variant: "destructive", duration: 3000 });
         setIsNavigating(false);
@@ -204,7 +204,7 @@ function TaskItem({ task, onUpdateTask, onDeleteTask, onEditTask, userLocation }
   const displayLocation = task.storeName || task.store;
 
   return (
-    <Card className={cn("flex flex-col", task.priority && priorityColor[task.priority])}>
+    <Card className={cn("flex flex-col transition-all duration-200 hover:shadow-lg hover:scale-105", task.priority && priorityColor[task.priority])}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <CardTitle className="text-xl flex items-center gap-2">
@@ -318,7 +318,7 @@ function NewTaskSheet({
   const [minute, setMinute] = React.useState('00');
   const [ampm, setAmpm] = React.useState('AM');
   
-  const [location, setLocation] = React.useState(''); // this will hold lat,lng
+  const [location, setLocation] = React.useState<{lat: number, lng: number} | null>(null);
   const [locationName, setLocationName] = React.useState(''); // this will hold readable name
   const [isLocationPickerOpen, setIsLocationPickerOpen] = React.useState(false);
 
@@ -342,7 +342,12 @@ function NewTaskSheet({
         setHour(formattedHour);
         setMinute(formattedMinute);
         setAmpm(formattedAmPm.toUpperCase());
-        setLocation(editingTask.store || '');
+        if (editingTask.store) {
+            const [lat, lng] = editingTask.store.split(',').map(Number);
+            setLocation({lat, lng});
+        } else {
+            setLocation(null);
+        }
         setLocationName(editingTask.storeName || '');
         setPriority(editingTask.priority || 'medium');
         setRecurring(editingTask.recurring || 'none');
@@ -354,7 +359,7 @@ function NewTaskSheet({
         setHour(format(now, 'hh'));
         setMinute('00');
         setAmpm(format(now, 'aa').toUpperCase());
-        setLocation('');
+        setLocation(null);
         setLocationName('');
         setPriority('medium');
         setRecurring('none');
@@ -386,17 +391,16 @@ function NewTaskSheet({
   }, [debouncedTitle, fetchTaskSuggestions]);
   
   const handleLocationSelect = (latLng: { lat: number; lng: number }) => {
-    const latLonStr = `${latLng.lat},${latLng.lng}`;
-    setLocation(latLonStr);
+    setLocation(latLng);
     setLocationName(`Custom location (${latLng.lat.toFixed(4)}, ${latLng.lng.toFixed(4)})`);
     setIsLocationPickerOpen(false);
   };
   
-  const handlePlaceSelect = (place: { placeId?: string, description: string, lat?: number, lng?: number, name?: string}) => {
+  const handlePlaceSelect = (place: { lat?: number, lng?: number, name?: string, address?: string }) => {
       if(place.lat && place.lng) {
-          setLocation(`${place.lat},${place.lng}`);
+          setLocation({lat: place.lat, lng: place.lng});
       }
-      setLocationName(place.name || place.description);
+      setLocationName(place.name || place.address || '');
   }
 
 
@@ -453,9 +457,11 @@ function NewTaskSheet({
         const locationResult = await findTaskLocation({
           taskTitle: title,
           userLocation,
+          locationsToExclude: []
         });
         if (locationResult) {
-          finalLocation = locationResult.latlon;
+          const [lat, lng] = locationResult.latlon.split(',').map(Number);
+          finalLocation = { lat, lng };
           finalLocationName = locationResult.name;
           toast({
             title: 'Location Found!',
@@ -486,7 +492,7 @@ function NewTaskSheet({
       title,
       description,
       dueDate: Timestamp.fromDate(combinedDueDate),
-      store: finalLocation,
+      store: finalLocation ? `${finalLocation.lat},${finalLocation.lng}` : undefined,
       storeName: finalLocationName,
       status: editingTask ? newStatus : 'pending',
       category: category,
@@ -496,6 +502,12 @@ function NewTaskSheet({
   
     if (taskData.recurring === undefined) {
       delete taskData.recurring;
+    }
+    if (taskData.store === undefined) {
+      delete taskData.store;
+    }
+    if (taskData.storeName === undefined) {
+      delete taskData.storeName;
     }
   
     onTaskSubmit(taskData);
@@ -591,6 +603,7 @@ function NewTaskSheet({
                       currentLocation={userLocation ? { lat: parseFloat(userLocation.split(',')[0]), lng: parseFloat(userLocation.split(',')[1]) } : null}
                       taskTitle={title}
                       placeholder="e.g., Downtown Mall"
+                      initialValue={locationName}
                   />
                   <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationPickerOpen(true)}>
                       <MapPin className="h-4 w-4" />
@@ -809,9 +822,17 @@ export default function TasksPage() {
         return;
     }
     
-    const locationOptions = {
+    let watchId: number;
+
+    const initialOptions = {
         enableHighAccuracy: false,
         timeout: 30000,
+        maximumAge: 60000,
+    };
+
+    const watchOptions = {
+        enableHighAccuracy: true,
+        timeout: 20000,
         maximumAge: 0,
     };
 
@@ -819,15 +840,15 @@ export default function TasksPage() {
         const { latitude, longitude } = position.coords;
         const newLocation = `${latitude},${longitude}`;
         setUserLocation(newLocation);
-        
-        // After getting the first successful location, start watching for updates.
-        navigator.geolocation.watchPosition(
+
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+        watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 const { latitude: lat, longitude: lon } = pos.coords;
                 setUserLocation(`${lat},${lon}`);
             },
             handleLocationError,
-            locationOptions
+            watchOptions
         );
     };
 
@@ -841,8 +862,13 @@ export default function TasksPage() {
         });
     };
     
-    // First, try to get the current position once.
-    navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, locationOptions);
+    navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, initialOptions);
+    
+    return () => {
+        if (watchId && navigator.geolocation) {
+            navigator.geolocation.clearWatch(watchId);
+        }
+    }
 
   }, [toast]);
   
@@ -1098,7 +1124,7 @@ export default function TasksPage() {
         }
         
         for (const task of unresolvedTasks) {
-            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation });
+            const locationResult = await findTaskLocation({ taskTitle: task.title, userLocation, locationsToExclude: [] });
             if (locationResult) {
                 const fullAddress = locationResult.latlon; // This is now lat,lon
                 locationsToVisit.push(fullAddress);
@@ -1256,7 +1282,3 @@ export default function TasksPage() {
     </>
   );
 }
-
-    
-
-    

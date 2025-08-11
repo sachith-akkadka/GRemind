@@ -11,6 +11,7 @@ interface MapNavigationProps {
   onRerouteRequested?: (currentLocation: LatLng) => void;
   proximityMeters?: number;
   voiceEnabled?: boolean;
+  center?: LatLng | null;
 }
 
 const MapNavigation: React.FC<MapNavigationProps> = ({
@@ -21,6 +22,7 @@ const MapNavigation: React.FC<MapNavigationProps> = ({
   onRerouteRequested = () => {},
   proximityMeters = Number(process.env.NEXT_PUBLIC_DEFAULT_PROXIMITY_METERS || 100),
   voiceEnabled = true,
+  center = null,
 }) => {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [mapObj, setMapObj] = useState<any>(null);
@@ -56,6 +58,12 @@ const MapNavigation: React.FC<MapNavigationProps> = ({
   }, []);
 
   useEffect(() => {
+    if (mapObj && center) {
+        mapObj.panTo(center);
+    }
+  }, [center, mapObj]);
+
+  useEffect(() => {
     if (!mapObj) return;
     requestRoute();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,12 +85,17 @@ const MapNavigation: React.FC<MapNavigationProps> = ({
 
   function requestRoute() {
     if (!directionsServiceRef.current || !origin || !destination) return;
+
+    const validWaypoints = waypoints
+        ? waypoints.filter(wp => wp.location && typeof wp.location === 'string' && wp.location.includes(','))
+        : [];
+        
     const g = (window as any).google;
     const request = {
       origin,
       destination,
       travelMode: g.maps.TravelMode.DRIVING,
-      waypoints,
+      waypoints: validWaypoints.length > 0 ? validWaypoints.map(wp => ({ location: wp.location })) : undefined,
       provideRouteAlternatives: false,
       optimizeWaypoints: true,
       drivingOptions: { departureTime: new Date() },
@@ -100,7 +113,7 @@ const MapNavigation: React.FC<MapNavigationProps> = ({
         }
         startPositionWatcher();
       } else {
-        console.error('Directions request failed:', status);
+        console.error('Directions request failed:', status, 'Origin:', origin, 'Destination:', destination, 'Waypoints:', waypoints);
       }
     });
   }
